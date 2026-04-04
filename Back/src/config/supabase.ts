@@ -111,3 +111,12 @@ export interface UsuarioInsignia {
   insignia_id: number;
   fecha_obtencion: string | null;
 }
+
+// Tipo específico para el ranking (solo los campos que necesitas)
+export interface RankingUser {
+  id: number;
+  nombre: string;
+  avatar_url: string | null;
+  puntos_actuales: number | null;
+  nivel: number | null;
+}
