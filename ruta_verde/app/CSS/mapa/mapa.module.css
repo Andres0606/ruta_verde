@@ -1,0 +1,324 @@
+/* ======================================================
+   RUTA VERDE — Mapa.module.css
+   ====================================================== */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700&family=DM+Sans:wght@400;500;600&display=swap");
+
+:root {
+  --verde-oscuro: #1a3d2b;
+  --verde-principal: #2d6a4f;
+  --verde-medio: #40916c;
+  --verde-claro: #74c69d;
+  --verde-suave: #b7e4c7;
+  --verde-palido: #d8f3dc;
+  --crema: #f8f5ef;
+  --crema-oscuro: #ede8df;
+  --blanco: #ffffff;
+  --texto-oscuro: #1a1a1a;
+  --texto-medio: #444;
+  --texto-suave: #6b7280;
+  --radio: 20px;
+  --radio-sm: 12px;
+  --sombra-suave: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --sombra-verde: 0 8px 32px rgba(45, 106, 79, 0.15);
+}
+
+.main {
+  font-family: "DM Sans", sans-serif;
+  background: var(--crema);
+  min-height: 100vh;
+}
+
+.topBar {
+  background: var(--verde-oscuro);
+  padding: 28px 80px;
+}
+.topBarInner {
+  max-width: 1300px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pageTitle {
+  font-family: "Fraunces", serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--blanco);
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+.pageSubtitle { font-size: 14px; color: var(--verde-suave); margin: 0; }
+.topStats { display: flex; gap: 24px; }
+.topStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radio-sm);
+  padding: 12px 20px;
+}
+.topStat strong {
+  font-family: "Fraunces", serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--verde-claro);
+}
+.topStat span { font-size: 11px; color: var(--verde-suave); }
+
+.layout {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 28px 80px 60px;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* SIDEBAR */
+.sidebar {
+  background: var(--blanco);
+  border-radius: var(--radio);
+  border: 1.5px solid var(--crema-oscuro);
+  box-shadow: var(--sombra-suave);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 220px);
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1.5px solid var(--crema-oscuro);
+  color: var(--texto-suave);
+}
+.searchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: "DM Sans", sans-serif;
+  font-size: 14px;
+  color: var(--texto-oscuro);
+  background: transparent;
+}
+.searchInput::placeholder { color: #c2cec7; }
+
+.filtros {
+  display: flex;
+  gap: 6px;
+  padding: 12px 14px;
+  flex-wrap: wrap;
+  border-bottom: 1.5px solid var(--crema-oscuro);
+}
+.filtroBtn {
+  font-family: "DM Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--crema-oscuro);
+  background: transparent;
+  color: var(--texto-medio);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.filtroBtn:hover { border-color: var(--verde-claro); color: var(--verde-principal); }
+.filtroActive {
+  background: var(--verde-principal);
+  border-color: var(--verde-principal);
+  color: var(--blanco) !important;
+}
+
+.lista {
+  overflow-y: auto;
+  flex: 1;
+}
+.lista::-webkit-scrollbar { width: 4px; }
+.lista::-webkit-scrollbar-track { background: transparent; }
+.lista::-webkit-scrollbar-thumb { background: var(--crema-oscuro); border-radius: 999px; }
+
+.listaItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--crema-oscuro);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.listaItem:hover { background: var(--crema); }
+.listaItemActive { background: var(--verde-palido) !important; border-left: 3px solid var(--verde-medio); }
+
+.listaNum {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  color: var(--blanco);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.listaInfo { flex: 1; min-width: 0; }
+.listaNombre {
+  font-size: 13px; font-weight: 600;
+  color: var(--verde-oscuro);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.listaDireccion {
+  font-size: 11px; color: var(--texto-suave);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 6px;
+}
+.listaTags { display: flex; gap: 4px; flex-wrap: wrap; }
+.listaTag {
+  font-size: 10px;
+  background: var(--crema);
+  border: 1px solid var(--crema-oscuro);
+  border-radius: 999px;
+  padding: 2px 7px;
+  color: var(--texto-medio);
+}
+.listaPuntos {
+  display: flex; flex-direction: column; align-items: center;
+  flex-shrink: 0;
+}
+.listaPuntos strong {
+  font-family: "Fraunces", serif;
+  font-size: 16px; font-weight: 700;
+  color: var(--verde-medio);
+}
+.listaPuntos small { font-size: 10px; color: var(--texto-suave); }
+
+/* MAPA ÁREA */
+.mapaArea {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mapaWrapper {
+  background: var(--blanco);
+  border-radius: var(--radio);
+  border: 1.5px solid var(--crema-oscuro);
+  box-shadow: var(--sombra-suave);
+  overflow: hidden;
+}
+.mapaSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: pointer;
+}
+
+/* DETALLE CARD */
+.detalleCard {
+  background: var(--blanco);
+  border: 1.5px solid var(--crema-oscuro);
+  border-radius: var(--radio);
+  overflow: hidden;
+  box-shadow: var(--sombra-suave);
+  animation: fadeSlideUp 0.3s ease both;
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.detalleBadge {
+  padding: 6px 20px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--blanco);
+}
+.detalleBody {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 24px;
+  gap: 16px;
+}
+.detalleLeft { flex: 1; }
+.detalleNombre {
+  font-family: "Fraunces", serif;
+  font-size: 20px; font-weight: 700;
+  color: var(--verde-oscuro);
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+}
+.detalleDireccion, .detalleHorario {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--texto-medio);
+  margin-bottom: 5px;
+}
+.detalleItems {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-top: 10px;
+}
+.detalleItem {
+  font-size: 12px;
+  background: var(--verde-palido);
+  border: 1px solid var(--verde-suave);
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: var(--verde-principal);
+  font-weight: 500;
+}
+.detalleRight {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+.detallePuntos {
+  display: flex; flex-direction: column;
+  align-items: center;
+  background: var(--verde-palido);
+  border: 1.5px solid var(--verde-suave);
+  border-radius: var(--radio-sm);
+  padding: 12px 18px;
+}
+.detallePuntos span {
+  font-family: "Fraunces", serif;
+  font-size: 24px; font-weight: 700;
+  color: var(--verde-medio);
+}
+.detallePuntos small { font-size: 11px; color: var(--texto-suave); }
+.btnRuta {
+  font-family: "DM Sans", sans-serif;
+  font-size: 13px; font-weight: 600;
+  padding: 10px 18px;
+  background: var(--verde-principal);
+  color: var(--blanco);
+  border: none; border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.btnRuta:hover { background: var(--verde-oscuro); transform: translateY(-1px); }
+
+/* LEYENDA */
+.leyenda {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  background: var(--blanco);
+  border: 1.5px solid var(--crema-oscuro);
+  border-radius: var(--radio-sm);
+  padding: 12px 20px;
+  box-shadow: var(--sombra-suave);
+}
+.leyendaItem { display: flex; align-items: center; gap: 7px; }
+.leyendaDot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.leyendaItem span { font-size: 12px; color: var(--texto-medio); font-weight: 500; }
+
+@media (max-width: 1100px) {
+  .topBar, .layout { padding-left: 32px; padding-right: 32px; }
+  .layout { grid-template-columns: 280px 1fr; }
+}
+@media (max-width: 820px) {
+  .topBar { padding: 20px; }
+  .layout { grid-template-columns: 1fr; padding: 20px 16px 48px; }
+  .sidebar { max-height: 320px; }
+  .topStats { display: none; }
+}

@@ -4,12 +4,10 @@ import styles from "../CSS/Header.module.css";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
-// 👇 Agrega esta interfaz
 interface HeaderProps {
-  currentPage?: string;  // El ? lo hace opcional
+  currentPage?: string;
 }
 
-// 👇 Recibe la prop
 export default function Header({ currentPage }: HeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -23,6 +21,7 @@ export default function Header({ currentPage }: HeaderProps) {
   return (
     <header className={`${styles.header} ${scrolled ? styles.headerScrolled : ""}`}>
       <div className={styles.inner}>
+
         {/* Logo */}
         <Link href="/" className={styles.logo}>
           <div className={styles.logoIcon}>
@@ -39,10 +38,10 @@ export default function Header({ currentPage }: HeaderProps) {
           </span>
         </Link>
 
-        {/* Nav principal - puedes usar currentPage para marcar el enlace activo */}
+        {/* Nav principal */}
         <nav className={`${styles.nav} ${menuOpen ? styles.navOpen : ""}`}>
-          <Link 
-            href="/clasificar" 
+          <Link
+            href="/clasificar"
             className={`${styles.navLink} ${currentPage === "clasificar" ? styles.active : ""}`}
             onClick={() => setMenuOpen(false)}
           >
@@ -52,8 +51,9 @@ export default function Header({ currentPage }: HeaderProps) {
             </svg>
             Clasificar
           </Link>
-          <Link 
-            href="/mapa" 
+
+          <Link
+            href="/mapa"
             className={`${styles.navLink} ${currentPage === "mapa" ? styles.active : ""}`}
             onClick={() => setMenuOpen(false)}
           >
@@ -63,8 +63,9 @@ export default function Header({ currentPage }: HeaderProps) {
             </svg>
             Mapa
           </Link>
-          <Link 
-            href="/puntos" 
+
+          <Link
+            href="/ecopuntos"
             className={`${styles.navLink} ${currentPage === "puntos" ? styles.active : ""}`}
             onClick={() => setMenuOpen(false)}
           >
@@ -73,8 +74,9 @@ export default function Header({ currentPage }: HeaderProps) {
             </svg>
             EcoPuntos
           </Link>
-          <Link 
-            href="/ranking" 
+
+          <Link
+            href="/ranking"
             className={`${styles.navLink} ${currentPage === "ranking" ? styles.active : ""}`}
             onClick={() => setMenuOpen(false)}
           >
@@ -87,10 +89,10 @@ export default function Header({ currentPage }: HeaderProps) {
 
         {/* Acciones */}
         <div className={styles.actions}>
-          <Link href="/login" className={styles.btnLogin}>
+          <Link href="/Login" className={styles.btnLogin}>
             Iniciar sesión
           </Link>
-          <Link href="/register" className={styles.btnRegister}>
+          <Link href="/Register" className={styles.btnRegister}>
             Registrarse
           </Link>
         </div>

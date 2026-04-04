@@ -1,5 +1,5 @@
 /* ======================================================
-   RUTA VERDE — header.module.css
+   RUTA VERDE — Header.module.css
    ====================================================== */
 
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=DM+Sans:wght@400;500;600&display=swap");
@@ -112,6 +112,17 @@
 }
 
 .navLink:hover svg {
+  color: #2d6a4f;
+}
+
+/* Estado activo — página actual */
+.active {
+  background: #d8f3dc;
+  color: #1a3d2b;
+  font-weight: 600;
+}
+
+.active svg {
   color: #2d6a4f;
 }
 

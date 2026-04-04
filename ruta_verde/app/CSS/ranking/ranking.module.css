@@ -1,0 +1,332 @@
+/* ======================================================
+   RUTA VERDE — Ranking.module.css
+   ====================================================== */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700&family=DM+Sans:wght@400;500;600&display=swap");
+
+:root {
+  --verde-oscuro: #1a3d2b;
+  --verde-principal: #2d6a4f;
+  --verde-medio: #40916c;
+  --verde-claro: #74c69d;
+  --verde-suave: #b7e4c7;
+  --verde-palido: #d8f3dc;
+  --crema: #f8f5ef;
+  --crema-oscuro: #ede8df;
+  --blanco: #ffffff;
+  --texto-oscuro: #1a1a1a;
+  --texto-medio: #444;
+  --texto-suave: #6b7280;
+  --radio: 20px;
+  --radio-sm: 12px;
+  --sombra-suave: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --sombra-verde: 0 8px 32px rgba(45, 106, 79, 0.15);
+}
+
+.main {
+  font-family: "DM Sans", sans-serif;
+  background: var(--crema);
+  min-height: 100vh;
+}
+
+/* TOP BAR */
+.topBar {
+  background: var(--verde-oscuro);
+  padding: 28px 80px;
+}
+.topBarInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.pageTitle {
+  font-family: "Fraunces", serif;
+  font-size: 32px; font-weight: 700;
+  color: var(--blanco);
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+.pageSubtitle { font-size: 14px; color: var(--verde-suave); margin: 0; }
+
+.periodoSwitch {
+  display: flex;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 2px;
+}
+.periodoBtn {
+  font-family: "DM Sans", sans-serif;
+  font-size: 13px; font-weight: 500;
+  padding: 8px 16px;
+  border: none; border-radius: 999px;
+  background: transparent;
+  color: var(--verde-suave);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.periodoBtn:hover { color: var(--blanco); }
+.periodoBtnActive {
+  background: var(--verde-medio) !important;
+  color: var(--blanco) !important;
+}
+
+/* LAYOUT */
+.layout {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 80px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+/* PODIO */
+.podioSection {
+  display: flex;
+  justify-content: center;
+}
+.podioWrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 20px;
+}
+.podioItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.podioAura {
+  position: absolute;
+  top: -16px;
+  width: 100px; height: 100px;
+  background: radial-gradient(circle, rgba(244,197,66,0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: auraPulse 2.5s ease-in-out infinite;
+}
+@keyframes auraPulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 0.4; }
+}
+
+.podioAvatar {
+  width: 60px; height: 60px;
+  background: var(--verde-oscuro);
+  color: var(--blanco);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700;
+  border: 3px solid;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  transition: transform 0.3s ease;
+  z-index: 1;
+}
+.podioItem:hover .podioAvatar { transform: scale(1.08); }
+
+.podioMedalla { font-size: 22px; margin-top: 2px; }
+
+.podioNombre {
+  font-size: 14px; font-weight: 600;
+  color: var(--verde-oscuro);
+  text-align: center;
+  max-width: 120px;
+}
+
+.podioPuntos {
+  font-family: "Fraunces", serif;
+  font-size: 16px; font-weight: 700;
+  color: var(--texto-medio);
+}
+
+.podioPedestal {
+  width: 120px;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12px;
+  margin-top: 8px;
+  opacity: 0.9;
+}
+.pedestalNum {
+  font-family: "Fraunces", serif;
+  font-size: 28px; font-weight: 700;
+  color: rgba(255,255,255,0.7);
+}
+
+/* TABLA */
+.tablaSection {
+  background: var(--blanco);
+  border: 1.5px solid var(--crema-oscuro);
+  border-radius: var(--radio);
+  overflow: hidden;
+  box-shadow: var(--sombra-suave);
+}
+
+.tablaHeader {
+  display: grid;
+  grid-template-columns: 60px 1fr 180px 110px 90px 80px;
+  align-items: center;
+  padding: 12px 24px;
+  background: var(--crema);
+  border-bottom: 1.5px solid var(--crema-oscuro);
+  gap: 12px;
+}
+.tablaHeader span {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--texto-suave);
+}
+
+.tablaFila {
+  display: grid;
+  grid-template-columns: 60px 1fr 180px 110px 90px 80px;
+  align-items: center;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--crema-oscuro);
+  gap: 12px;
+  transition: background 0.2s ease;
+  animation: fadeSlideUp 0.4s ease both;
+  cursor: default;
+}
+.tablaFila:last-of-type { border-bottom: none; }
+.filaDestacada { background: linear-gradient(90deg, rgba(248,245,239,0.6), transparent); }
+.filaHovered { background: var(--crema) !important; }
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Celdas */
+.tdPos { display: flex; align-items: center; justify-content: center; }
+.medalla {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: "Fraunces", serif;
+  font-size: 13px; font-weight: 700;
+  color: rgba(0,0,0,0.5);
+}
+.posNum {
+  font-family: "Fraunces", serif;
+  font-size: 18px; font-weight: 700;
+  color: var(--crema-oscuro);
+}
+
+.tdUsuario { display: flex; align-items: center; gap: 12px; }
+.filaAvatar {
+  width: 38px; height: 38px;
+  background: var(--verde-palido);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+  color: var(--verde-oscuro);
+  flex-shrink: 0;
+}
+.filaNombre { font-size: 14px; font-weight: 600; color: var(--texto-oscuro); }
+.filaCiudad { font-size: 11px; color: var(--texto-suave); margin-top: 1px; }
+
+.tdBarra { display: flex; align-items: center; }
+.barraWrap {
+  flex: 1;
+  height: 6px;
+  background: var(--crema-oscuro);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.barraFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.8s cubic-bezier(0.22,1,0.36,1);
+}
+
+.tdPuntos { display: flex; align-items: baseline; gap: 3px; }
+.puntosVal {
+  font-family: "Fraunces", serif;
+  font-size: 18px; font-weight: 700;
+  color: var(--verde-medio);
+}
+.puntosUnidad { font-size: 11px; color: var(--texto-suave); }
+
+.tdEntregas { font-size: 14px; color: var(--texto-medio); font-weight: 500; }
+
+.tdRacha {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 13px; font-weight: 600;
+  color: var(--texto-medio);
+}
+.rachaIcon { font-size: 14px; }
+
+/* SEPARADOR */
+.separador {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  font-size: 12px; font-weight: 600;
+  color: var(--verde-medio);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: var(--verde-palido);
+  border-top: 1px solid var(--verde-suave);
+  border-bottom: 1px solid var(--verde-suave);
+}
+.separadorLinea { flex: 1; height: 1px; background: var(--verde-suave); }
+
+/* FILA MÍA */
+.filaMia {
+  background: rgba(64,145,108,0.04) !important;
+  border-left: 3px solid var(--verde-medio);
+}
+
+.tuChip {
+  display: inline-block;
+  background: var(--verde-palido);
+  color: var(--verde-principal);
+  font-size: 10px; font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.metaChip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 24px;
+  font-size: 13px;
+  color: var(--texto-medio);
+  background: var(--crema);
+  border-top: 1px solid var(--crema-oscuro);
+}
+.metaChip strong { color: var(--verde-oscuro); }
+.metaChip span { font-size: 18px; }
+
+@media (max-width: 1024px) {
+  .topBar, .layout { padding-left: 32px; padding-right: 32px; }
+  .tablaHeader, .tablaFila {
+    grid-template-columns: 50px 1fr 120px 90px 70px;
+  }
+  .thRacha, .tdRacha { display: none; }
+}
+@media (max-width: 720px) {
+  .topBar { padding: 20px; }
+  .layout { padding: 24px 16px 48px; gap: 32px; }
+  .podioPedestal { width: 90px; }
+  .tablaHeader, .tablaFila { grid-template-columns: 44px 1fr 80px 70px; }
+  .thBarra, .tdBarra, .thEntregas, .tdEntregas { display: none; }
+  .periodoSwitch { flex-wrap: wrap; }
+}
