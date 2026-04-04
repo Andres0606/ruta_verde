@@ -1,0 +1,339 @@
+/* ======================================================
+   RUTA VERDE — footer.module.css
+   ====================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=DM+Sans:wght@400;500;600&display=swap");
+
+.footer {
+  background: #1a3d2b;
+  color: #b7e4c7;
+  font-family: "DM Sans", sans-serif;
+  position: relative;
+  margin-top: 0;
+}
+
+/* ========================
+   OLA DECORATIVA
+   ======================== */
+
+.wave {
+  width: 100%;
+  height: 80px;
+  overflow: hidden;
+  margin-top: -2px;
+  display: block;
+  background: #f8f5ef; /* mismo fondo que el cta / página */
+}
+
+.wave svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ========================
+   INNER
+   ======================== */
+
+.inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 64px 40px 40px;
+}
+
+/* ========================
+   TOP GRID
+   ======================== */
+
+.top {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 48px;
+  padding-bottom: 48px;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ========================
+   BRAND
+   ======================== */
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.logoIcon {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, #40916c, #74c69d);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.logo:hover .logoIcon {
+  transform: rotate(-5deg);
+}
+
+.logoText {
+  font-family: "DM Sans", sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  color: #ffffff;
+}
+
+.logoText strong {
+  font-weight: 700;
+}
+
+.brandDesc {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #74c69d;
+  max-width: 280px;
+}
+
+.socialLinks {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.socialBtn {
+  width: 38px;
+  height: 38px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #74c69d;
+  text-decoration: none;
+  transition: all 0.22s ease;
+}
+
+.socialBtn:hover {
+  background: rgba(116, 198, 157, 0.15);
+  border-color: rgba(116, 198, 157, 0.4);
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+/* ========================
+   NAV GROUPS
+   ======================== */
+
+.navGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.navTitle {
+  font-family: "DM Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #ffffff;
+  margin: 0 0 4px;
+}
+
+.navList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.navList li a {
+  font-size: 14px;
+  color: #74c69d;
+  text-decoration: none;
+  transition: color 0.2s ease, padding-left 0.2s ease;
+  display: inline-block;
+}
+
+.navList li a:hover {
+  color: #ffffff;
+  padding-left: 4px;
+}
+
+/* ========================
+   IMPACT STRIP
+   ======================== */
+
+.impactStrip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 40px 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 20px 32px;
+}
+
+.impactItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 28px;
+  flex: 1;
+  justify-content: center;
+}
+
+.impactEmoji {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.impactItem strong {
+  display: block;
+  font-family: "Fraunces", serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.impactItem small {
+  display: block;
+  font-size: 12px;
+  color: #74c69d;
+}
+
+.impactDivider {
+  width: 1.5px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+/* ========================
+   BOTTOM BAR
+   ======================== */
+
+.bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-top: 28px;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.08);
+}
+
+.copyright {
+  font-size: 13px;
+  color: rgba(116, 198, 157, 0.7);
+  margin: 0;
+}
+
+.bottomLinks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bottomLinks a {
+  font-size: 13px;
+  color: rgba(116, 198, 157, 0.7);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.bottomLinks a:hover {
+  color: #ffffff;
+}
+
+.bottomLinks span {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 12px;
+}
+
+.madeWith {
+  font-size: 13px;
+  color: rgba(116, 198, 157, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.heart {
+  animation: heartbeat 2s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+/* ========================
+   RESPONSIVE
+   ======================== */
+
+@media (max-width: 1024px) {
+  .top {
+    grid-template-columns: 1fr 1fr;
+    gap: 36px;
+  }
+
+  .brand {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .inner {
+    padding: 48px 20px 32px;
+  }
+
+  .top {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .brand {
+    grid-column: span 1;
+  }
+
+  .impactStrip {
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .impactItem {
+    padding: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .impactDivider {
+    width: 100%;
+    height: 1.5px;
+  }
+
+  .bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}

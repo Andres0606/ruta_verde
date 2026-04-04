@@ -1,0 +1,284 @@
+/* ======================================================
+   RUTA VERDE — header.module.css
+   ====================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=DM+Sans:wght@400;500;600&display=swap");
+
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 16px 0;
+  transition: all 0.35s ease;
+  background: transparent;
+}
+
+.headerScrolled {
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1.5px solid rgba(45, 106, 79, 0.12);
+  padding: 10px 0;
+  box-shadow: 0 4px 24px rgba(45, 106, 79, 0.1);
+}
+
+.inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+/* ========================
+   LOGO
+   ======================== */
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logoIcon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #2d6a4f, #40916c);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(45, 106, 79, 0.3);
+  transition: transform 0.25s ease;
+}
+
+.logo:hover .logoIcon {
+  transform: rotate(-5deg) scale(1.05);
+}
+
+.logoText {
+  font-family: "DM Sans", sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  color: #1a3d2b;
+  letter-spacing: -0.01em;
+}
+
+.logoText strong {
+  font-weight: 700;
+}
+
+/* ========================
+   NAV
+   ======================== */
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #444;
+  text-decoration: none;
+  font-family: "DM Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 999px;
+  transition: all 0.22s ease;
+  white-space: nowrap;
+}
+
+.navLink svg {
+  color: #74c69d;
+  transition: color 0.22s ease;
+  flex-shrink: 0;
+}
+
+.navLink:hover {
+  background: #d8f3dc;
+  color: #2d6a4f;
+}
+
+.navLink:hover svg {
+  color: #2d6a4f;
+}
+
+/* ========================
+   ACCIONES
+   ======================== */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.btnLogin {
+  display: inline-flex;
+  align-items: center;
+  font-family: "DM Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2d6a4f;
+  text-decoration: none;
+  padding: 9px 20px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  transition: all 0.22s ease;
+}
+
+.btnLogin:hover {
+  background: #d8f3dc;
+  border-color: #b7e4c7;
+}
+
+.btnRegister {
+  display: inline-flex;
+  align-items: center;
+  font-family: "DM Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 9px 22px;
+  border-radius: 999px;
+  background: #2d6a4f;
+  transition: all 0.22s ease;
+  box-shadow: 0 3px 14px rgba(45, 106, 79, 0.28);
+}
+
+.btnRegister:hover {
+  background: #1a3d2b;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 18px rgba(45, 106, 79, 0.36);
+}
+
+/* ========================
+   HAMBURGUESA
+   ======================== */
+
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.hamburger span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: #1a3d2b;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  transform-origin: center;
+}
+
+.hamburgerOpen span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.hamburgerOpen span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.hamburgerOpen span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ========================
+   OVERLAY MOBILE
+   ======================== */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 61, 43, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: -1;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ========================
+   RESPONSIVE
+   ======================== */
+
+@media (max-width: 900px) {
+  .inner {
+    padding: 0 20px;
+    gap: 0;
+    justify-content: space-between;
+  }
+
+  .hamburger {
+    display: flex;
+  }
+
+  .actions {
+    display: none;
+  }
+
+  .nav {
+    position: fixed;
+    top: 0;
+    right: -280px;
+    width: 270px;
+    height: 100vh;
+    background: #f8f5ef;
+    border-left: 1.5px solid #ede8df;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 80px 24px 32px;
+    gap: 4px;
+    transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -8px 0 32px rgba(45, 106, 79, 0.12);
+    z-index: 999;
+  }
+
+  .navOpen {
+    right: 0;
+  }
+
+  .navLink {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 16px;
+    border-radius: 14px;
+  }
+
+  .nav .btnLogin,
+  .nav .btnRegister {
+    display: inline-flex;
+    margin-top: 16px;
+    width: calc(100% - 32px);
+    justify-content: center;
+  }
+}
