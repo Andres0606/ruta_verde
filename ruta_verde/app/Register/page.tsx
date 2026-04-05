@@ -11,7 +11,6 @@ interface FormState {
   nombre: string;
   telefono: string;
   email: string;
-  ciudad: string;
   password: string;
   confirmPassword: string;
   terminos: boolean;
@@ -21,32 +20,10 @@ interface FormErrors {
   nombre?: string;
   telefono?: string;
   email?: string;
-  ciudad?: string;
   password?: string;
   confirmPassword?: string;
   terminos?: string;
 }
-
-/* ========================
-   Ciudades de Colombia (muestra)
-   ======================== */
-const CIUDADES = [
-  "Villavicencio",
-  "Bogotá",
-  "Medellín",
-  "Cali",
-  "Barranquilla",
-  "Cartagena",
-  "Bucaramanga",
-  "Manizales",
-  "Pereira",
-  "Ibagué",
-  "Neiva",
-  "Pasto",
-  "Cúcuta",
-  "Santa Marta",
-  "Otra",
-];
 
 /* ========================
    Helpers de validación
@@ -70,7 +47,6 @@ function validateForm(form: FormState): FormErrors {
   if (!form.nombre.trim()) errors.nombre = "El nombre es requerido";
   if (!form.email.trim()) errors.email = "El correo es requerido";
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = "Correo no válido";
-  if (!form.ciudad) errors.ciudad = "Selecciona una ciudad";
   const rules = checkPasswordRules(form.password);
   if (!form.password) errors.password = "La contraseña es requerida";
   else if (!rules.length || !rules.number || !rules.special)
@@ -100,7 +76,6 @@ export default function RegisterPage() {
     nombre: "",
     telefono: "",
     email: "",
-    ciudad: "",
     password: "",
     confirmPassword: "",
     terminos: false,
@@ -137,7 +112,7 @@ export default function RegisterPage() {
     e.preventDefault();
     const errs = validateForm(form);
     setErrors(errs);
-    setTouched({ nombre: true, telefono: true, email: true, ciudad: true, password: true, confirmPassword: true, terminos: true });
+    setTouched({ nombre: true, telefono: true, email: true, password: true, confirmPassword: true, terminos: true });
     if (Object.keys(errs).length > 0) return;
     setLoading(true);
     setTimeout(() => setLoading(false), 2000);
@@ -354,37 +329,6 @@ export default function RegisterPage() {
                 <span className={styles.fieldError}>
                   <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5"/><path d="M6 4v3M6 8.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                   {errors.email}
-                </span>
-              )}
-            </div>
-
-            {/* Ciudad */}
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="ciudad">Ciudad</label>
-              <div className={styles.inputWrapper}>
-                <span className={styles.inputIcon}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                    <circle cx="12" cy="10" r="3"/>
-                  </svg>
-                </span>
-                <select
-                  id="ciudad"
-                  className={`${styles.select} ${touched.ciudad && errors.ciudad ? styles.inputError : ""} ${touched.ciudad && !errors.ciudad && form.ciudad ? styles.inputSuccess : ""}`}
-                  value={form.ciudad}
-                  onChange={(e) => set("ciudad", e.target.value)}
-                  onBlur={() => blur("ciudad")}
-                >
-                  <option value="" disabled>Selecciona tu ciudad</option>
-                  {CIUDADES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-              {touched.ciudad && errors.ciudad && (
-                <span className={styles.fieldError}>
-                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.5"/><path d="M6 4v3M6 8.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                  {errors.ciudad}
                 </span>
               )}
             </div>
