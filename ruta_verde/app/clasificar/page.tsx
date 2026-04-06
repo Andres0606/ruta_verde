@@ -3,28 +3,71 @@
 import styles from "../CSS/clasificar/clasificar.module.css";
 import Header from "../Components/header";
 import Footer from "../Components/footer";
-import { useState, useRef, useCallback } from "react";
-
-const RESULTADOS_MOCK = [
-  { tipo: "Plástico PET", emoji: "♻️", puntos: 15, color: "#2563eb", consejo: "Aplasta la botella antes de entregar. Ve al punto azul más cercano.", categoria: "Reciclable" },
-  { tipo: "Cartón / Papel", emoji: "📦", puntos: 10, color: "#92400e", consejo: "Retira grapas o cinta adhesiva. Dobla para reducir volumen.", categoria: "Reciclable" },
-  { tipo: "Vidrio", emoji: "🍶", puntos: 20, color: "#0e7490", consejo: "No mezcles colores. Llévalo al contenedor verde.", categoria: "Reciclable" },
-  { tipo: "Residuo Orgánico", emoji: "🌿", puntos: 8, color: "#15803d", consejo: "Ideal para compostaje. Separa de otros residuos.", categoria: "Orgánico" },
-  { tipo: "Metal / Lata", emoji: "🥫", puntos: 25, color: "#6b7280", consejo: "Enjuaga antes de entregar. Tiene alto valor de reciclaje.", categoria: "Reciclable" },
-];
+import { useState, useRef, useCallback, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
 
 type Fase = "idle" | "camara" | "captura" | "analizando" | "resultado";
 
+interface ResultadoReal {
+  success: boolean;
+  tipo: string;
+  categoria_original?: string;
+  confianza: number;
+  puntos: number;
+  puntos_totales?: number;
+  mensaje?: string;
+}
+
 export default function ClasificarPage() {
+  const router = useRouter();
   const [fase, setFase] = useState<Fase>("idle");
-  const [resultado, setResultado] = useState<(typeof RESULTADOS_MOCK)[0] | null>(null);
+  const [resultado, setResultado] = useState<ResultadoReal | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);
   const [arrastrar, setArrastrar] = useState(false);
+  const [usuario, setUsuario] = useState<any>(null);
+  const [cargandoUsuario, setCargandoUsuario] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Verificar autenticación al cargar
+  useEffect(() => {
+    const verificarAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/Login');
+        return;
+      }
+      
+      setAccessToken(session.access_token);
+      
+      const { data: dbUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_uuid', session.user.id)
+        .single();
+      
+      setUsuario(dbUser);
+      setCargandoUsuario(false);
+    };
+    
+    verificarAuth();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setAccessToken(session.access_token);
+      } else {
+        router.push('/Login');
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [router]);
 
   /* Abrir cámara */
   const abrirCamara = async () => {
@@ -36,7 +79,8 @@ export default function ClasificarPage() {
         if (videoRef.current) videoRef.current.srcObject = stream;
       }, 100);
     } catch {
-      alert("No se pudo acceder a la cámara. Intenta subir una imagen.");
+      setErrorMsg("No se pudo acceder a la cámara. Intenta subir una imagen.");
+      setTimeout(() => setErrorMsg(null), 3000);
     }
   };
 
@@ -54,36 +98,86 @@ export default function ClasificarPage() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext("2d")?.drawImage(video, 0, 0);
-    const url = canvas.toDataURL("image/jpeg");
-    setFotoUrl(url);
-    cerrarCamara();
-    analizar();
+    
+    canvas.toBlob(async (blob) => {
+      if (blob) {
+        const file = new File([blob], "foto.jpg", { type: "image/jpeg" });
+        setFotoUrl(URL.createObjectURL(blob));
+        cerrarCamara();
+        await analizarConIA(file);
+      }
+    }, "image/jpeg", 0.9);
   };
 
   /* Subir imagen */
-  const subirImagen = (file: File) => {
+  const subirImagen = async (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       setFotoUrl(e.target?.result as string);
-      analizar();
     };
     reader.readAsDataURL(file);
+    await analizarConIA(file);
   };
 
-  /* Análisis simulado */
-  const analizar = () => {
+  /* Análisis con IA */
+  const analizarConIA = async (file: File) => {
     setFase("analizando");
-    setTimeout(() => {
-      const r = RESULTADOS_MOCK[Math.floor(Math.random() * RESULTADOS_MOCK.length)];
-      setResultado(r);
+    setErrorMsg(null);
+    
+    if (!accessToken) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setErrorMsg('Debes iniciar sesión primero');
+        setFase("idle");
+        return;
+      }
+      setAccessToken(session.access_token);
+    }
+    
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch('/api/predict', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Error al analizar la imagen');
+      }
+
+      console.log('🔴 RESPUESTA DE LA API:', data);
+      
+      setResultado(data);
       setFase("resultado");
-    }, 2800);
+      
+      if (data.puntos_totales !== undefined && usuario) {
+        setUsuario({ ...usuario, puntos_actuales: data.puntos_totales });
+      }
+      
+    } catch (error) {
+      console.error('Error:', error);
+      setErrorMsg(error instanceof Error ? error.message : 'Error al analizar. Intenta de nuevo.');
+      setFase("idle");
+      setFotoUrl(null);
+    }
   };
 
   const reiniciar = () => {
     setFase("idle");
     setResultado(null);
     setFotoUrl(null);
+    setErrorMsg(null);
+  };
+
+  const generarQR = () => {
+    alert('Funcionalidad en desarrollo');
   };
 
   /* Drag & Drop */
@@ -92,14 +186,60 @@ export default function ClasificarPage() {
     setArrastrar(false);
     const file = e.dataTransfer.files[0];
     if (file?.type.startsWith("image/")) subirImagen(file);
-  }, []);
+  }, [accessToken]);
+
+  /* 🔴 BOTÓN DE PRUEBA - Función para probar la API */
+  const probarAPI = async () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('No hay sesión activa');
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/predict', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${session.access_token}` },
+          body: formData
+        });
+        const data = await res.json();
+        
+        // 🔴 MUESTRA LA RESPUESTA CRUDA
+        alert(JSON.stringify(data, null, 2));
+      } catch (error) {
+        alert('Error: ' + String(error));
+      }
+    };
+    input.click();
+  };
+
+  if (cargandoUsuario) {
+    return (
+      <>
+        <Header currentPage="clasificar" />
+        <main className={styles.main}>
+          <div className={styles.loadingState}>Cargando...</div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
       <Header currentPage="clasificar" />
       <main className={styles.main}>
 
-        {/* Hero top */}
         <div className={styles.topBar}>
           <div className={styles.topBarInner}>
             <div>
@@ -108,16 +248,23 @@ export default function ClasificarPage() {
             </div>
             <div className={styles.topBadge}>
               <span>🤖</span> IA activa
+              {usuario && <span style={{ marginLeft: 12, background: '#2d6a4f', padding: '4px 8px', borderRadius: 20 }}>
+                🪙 {usuario.puntos_actuales || 0} pts
+              </span>}
             </div>
           </div>
         </div>
 
+        {errorMsg && (
+          <div className={styles.errorBanner}>
+            ⚠️ {errorMsg}
+          </div>
+        )}
+
         <div className={styles.layout}>
 
-          {/* Panel principal */}
           <div className={styles.mainPanel}>
 
-            {/* IDLE — zona de carga */}
             {fase === "idle" && (
               <div
                 className={`${styles.dropZone} ${arrastrar ? styles.dropping : ""}`}
@@ -160,13 +307,10 @@ export default function ClasificarPage() {
               </div>
             )}
 
-            {/* CÁMARA activa */}
             {fase === "camara" && (
               <div className={styles.cameraContainer}>
                 <video ref={videoRef} autoPlay playsInline muted className={styles.videoFeed} />
                 <canvas ref={canvasRef} style={{ display: "none" }} />
-
-                {/* Overlay de encuadre */}
                 <div className={styles.cameraOverlay}>
                   <div className={styles.scanFrame}>
                     <div className={styles.corner} data-pos="tl" />
@@ -177,7 +321,6 @@ export default function ClasificarPage() {
                   </div>
                   <p className={styles.cameraHint}>Centra el residuo en el encuadre</p>
                 </div>
-
                 <div className={styles.cameraControls}>
                   <button className={styles.btnClose} onClick={cerrarCamara}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -192,7 +335,6 @@ export default function ClasificarPage() {
               </div>
             )}
 
-            {/* ANALIZANDO */}
             {fase === "analizando" && (
               <div className={styles.analyzeState}>
                 {fotoUrl && <img src={fotoUrl} alt="Captura" className={styles.captureThumb} />}
@@ -204,7 +346,7 @@ export default function ClasificarPage() {
                       </svg>
                     </div>
                   </div>
-                  <p className={styles.analyzeLabel}>Analizando residuo…</p>
+                  <p className={styles.analyzeLabel}>Analizando residuo con IA...</p>
                   <div className={styles.analyzeDots}>
                     <div /><div /><div />
                   </div>
@@ -212,14 +354,16 @@ export default function ClasificarPage() {
               </div>
             )}
 
-            {/* RESULTADO */}
             {fase === "resultado" && resultado && (
               <div className={styles.resultState}>
                 {fotoUrl && (
                   <div className={styles.resultImageWrap}>
                     <img src={fotoUrl} alt="Residuo" className={styles.resultImage} />
                     <div className={styles.resultBadgeImg}>
-                      <span style={{ fontSize: 28 }}>{resultado.emoji}</span>
+                      <span style={{ fontSize: 28 }}>{resultado.tipo === 'Vidrio' ? '🍶' : resultado.tipo === 'Plástico' ? '♻️' : resultado.tipo === 'Papel / Cartón' ? '📦' : resultado.tipo === 'Metal' ? '🥫' : '🌿'}</span>
+                    </div>
+                    <div className={styles.confianzaBadge}>
+                      {resultado.confianza}% confianza
                     </div>
                   </div>
                 )}
@@ -227,7 +371,12 @@ export default function ClasificarPage() {
                 <div className={styles.resultCard}>
                   <div className={styles.resultHeader}>
                     <div>
-                      <div className={styles.resultCat}>{resultado.categoria}</div>
+                      <div className={styles.resultCat}>
+                        {resultado.categoria_original === 'GLASS' ? 'Vidrio' : 
+                         resultado.categoria_original === 'PAPER' ? 'Papel' :
+                         resultado.categoria_original === 'PLASTIC' ? 'Plástico' :
+                         resultado.categoria_original === 'METAL' ? 'Metal' : 'Orgánico'}
+                      </div>
                       <h2 className={styles.resultTipo}>{resultado.tipo}</h2>
                     </div>
                     <div className={styles.resultPuntosChip}>
@@ -238,11 +387,11 @@ export default function ClasificarPage() {
 
                   <div className={styles.resultConsejo}>
                     <div className={styles.consejoIcon}>💡</div>
-                    <p>{resultado.consejo}</p>
+                    <p>{resultado.mensaje || `¡Es ${resultado.tipo}!`}</p>
                   </div>
 
                   <div className={styles.resultActions}>
-                    <button className={styles.btnQR}>
+                    <button className={styles.btnQR} onClick={generarQR}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
                         <rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h.01M17 14h.01M21 14h.01M21 17h1v1h-1M17 17h1v4M14 21h3"/>
@@ -261,7 +410,6 @@ export default function ClasificarPage() {
             )}
           </div>
 
-          {/* Panel lateral — historial */}
           <div className={styles.sidePanel}>
             <div className={styles.sideCard}>
               <h3 className={styles.sideTitle}>Tipos de residuos</h3>
@@ -272,7 +420,6 @@ export default function ClasificarPage() {
                   { emoji: "🍶", label: "Vidrio", color: "#0e7490" },
                   { emoji: "🥫", label: "Metal", color: "#6b7280" },
                   { emoji: "🌿", label: "Orgánico", color: "#15803d" },
-                  { emoji: "⚠️", label: "Peligroso", color: "#dc2626" },
                 ].map((t) => (
                   <div key={t.label} className={styles.tipoItem}>
                     <span className={styles.tipoEmoji}>{t.emoji}</span>
@@ -284,15 +431,15 @@ export default function ClasificarPage() {
             </div>
 
             <div className={styles.sideCard}>
-              <h3 className={styles.sideTitle}>Tu sesión</h3>
+              <h3 className={styles.sideTitle}>Tu progreso</h3>
               <div className={styles.sessionStats}>
                 <div className={styles.sessionStat}>
-                  <span className={styles.sessionNum}>0</span>
-                  <span className={styles.sessionLabel}>Clasificados hoy</span>
+                  <span className={styles.sessionNum}>{usuario?.puntos_actuales || 0}</span>
+                  <span className={styles.sessionLabel}>Puntos totales</span>
                 </div>
                 <div className={styles.sessionStat}>
-                  <span className={styles.sessionNum}>0</span>
-                  <span className={styles.sessionLabel}>Puntos ganados</span>
+                  <span className={styles.sessionNum}>{usuario?.nivel || 1}</span>
+                  <span className={styles.sessionLabel}>Nivel</span>
                 </div>
               </div>
             </div>

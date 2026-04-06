@@ -1,16 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
 
-dotenv.config();
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Cliente básico - funciona en cualquier entorno
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // ==================== TIPOS DE LAS TABLAS ====================
 
@@ -112,7 +106,6 @@ export interface UsuarioInsignia {
   fecha_obtencion: string | null;
 }
 
-// Tipo específico para el ranking (solo los campos que necesitas)
 export interface RankingUser {
   id: number;
   nombre: string;

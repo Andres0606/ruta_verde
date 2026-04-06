@@ -566,3 +566,35 @@
   .dropActions { flex-direction: column; width: 100%; }
   .btnCamera, .btnUpload { width: 100%; justify-content: center; }
 }
+
+.confianzaBadge {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.errorBanner {
+  background: #fee2e2;
+  border-left: 4px solid #dc2626;
+  color: #991b1b;
+  padding: 12px 20px;
+  margin: 0 24px 20px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.loadingState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  font-size: 18px;
+  color: #6b7280;
+}
