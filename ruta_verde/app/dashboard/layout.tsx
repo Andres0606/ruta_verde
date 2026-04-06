@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import styles from "../CSS/Dashboard/Dashboard.module.css";
+import Link from "next/link";
 
 export default function DashboardLayout({
   children,
@@ -54,16 +55,16 @@ export default function DashboardLayout({
     <div className={styles.dashboard}>
       {/* Sidebar */}
       <aside className={styles.sidebar}>
-        <div className={styles.logo}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 2a10 10 0 1 0 10 10" />
-            <path d="M12 2c2.5 3 4 6.5 4 10" />
-            <path d="M12 2c-2.5 3-4 6.5-4 10" />
-            <path d="M2 12h20" />
-            <path d="M12 12c3-2.5 6.5-4 10-4" />
-          </svg>
-          <span>Ruta<span className={styles.logoGreen}>Verde</span></span>
-        </div>
+        <Link href="/" className={styles.logo}>
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 2a10 10 0 1 0 10 10" />
+    <path d="M12 2c2.5 3 4 6.5 4 10" />
+    <path d="M12 2c-2.5 3-4 6.5-4 10" />
+    <path d="M2 12h20" />
+    <path d="M12 12c3-2.5 6.5-4 10-4" />
+  </svg>
+  <span>Ruta<span className={styles.logoGreen}>Verde</span></span>
+</Link>
 
         <nav className={styles.nav}>
           <a href="/dashboard" className={`${styles.navItem} ${pathname === "/dashboard" ? styles.active : ""}`}>
