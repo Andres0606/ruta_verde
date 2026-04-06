@@ -3,6 +3,8 @@
 import styles from "../CSS/Register/Register.module.css";
 import Link from "next/link";
 import { useState, useMemo } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
 
 /* ========================
    Tipos
@@ -72,6 +74,7 @@ function CheckIcon({ size = 8 }: { size?: number }) {
    COMPONENTE PRINCIPAL
    ======================== */
 export default function RegisterPage() {
+  const router = useRouter();
   const [form, setForm] = useState<FormState>({
     nombre: "",
     telefono: "",
@@ -87,6 +90,7 @@ export default function RegisterPage() {
   const [errors, setErrors]                    = useState<FormErrors>({});
   const [touched, setTouched]                  = useState<Record<string, boolean>>({});
   const [passwordFocused, setPasswordFocused]  = useState(false);
+  const [generalError, setGeneralError]        = useState<string | null>(null);
 
   const pwdRules = useMemo(() => checkPasswordRules(form.password), [form.password]);
   const strengthLevel = useMemo(() => getStrengthLevel(pwdRules), [pwdRules]);
@@ -100,6 +104,7 @@ export default function RegisterPage() {
     if (errors[field as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
+    setGeneralError(null);
   };
 
   const blur = (field: string) => {
@@ -108,15 +113,106 @@ export default function RegisterPage() {
     setErrors(errs);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const errs = validateForm(form);
-    setErrors(errs);
-    setTouched({ nombre: true, telefono: true, email: true, password: true, confirmPassword: true, terminos: true });
-    if (Object.keys(errs).length > 0) return;
-    setLoading(true);
-    setTimeout(() => setLoading(false), 2000);
-  };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setGeneralError(null);
+  
+  const errs = validateForm(form);
+  setErrors(errs);
+  setTouched({ nombre: true, telefono: true, email: true, password: true, confirmPassword: true, terminos: true });
+  
+  if (Object.keys(errs).length > 0) return;
+  
+  setLoading(true);
+
+  // 1. Registrar en Supabase Auth
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email: form.email,
+    password: form.password,
+    options: {
+      data: {
+        nombre: form.nombre,
+      },
+    },
+  });
+
+  if (authError) {
+    setGeneralError(authError.message);
+    setLoading(false);
+    return;
+  }
+
+  if (authData.user) {
+    // 2. PRIMERO: Verificar si ya existe en la tabla users
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", form.email)
+      .single();
+
+    if (existingUser) {
+      // El usuario ya existe, solo actualizar el auth_uuid
+      console.log("Usuario ya existe, actualizando auth_uuid...");
+      const { error: updateError } = await supabase
+        .from("users")
+        .update({ 
+  auth_uuid: authData.user.id,
+  telefono: form.telefono || null
+})
+        .eq("email", form.email);
+      
+      if (updateError) {
+        console.error("Error al actualizar:", updateError);
+        setGeneralError("Error al vincular tu cuenta. Contacta a soporte.");
+        setLoading(false);
+        return;
+      }
+      
+      console.log("Usuario actualizado correctamente");
+      router.push("/Login?registered=true");
+      return;
+    }
+    
+    // 3. Si no existe, crear nuevo registro
+    console.log("Creando nuevo usuario...");
+    const { error: dbError } = await supabase.from("users").insert({
+      auth_uuid: authData.user.id,
+      email: form.email,
+      nombre: form.nombre,
+      telefono: form.telefono || null,
+      puntos_actuales: 0,
+      nivel: 1,
+      rol: "ciudadano",
+      fecha_registro: new Date().toISOString(),
+    });
+
+    if (dbError) {
+      console.error("Error al guardar en users:", dbError);
+      
+      // Si es error de duplicado, intentar actualizar
+      if (dbError.code === "23505") {
+        console.log("Error de duplicado, intentando actualizar...");
+        const { error: updateError } = await supabase
+          .from("users")
+          .update({ auth_uuid: authData.user.id })
+          .eq("email", form.email);
+        
+        if (updateError) {
+          setGeneralError("Error al crear tu perfil. Contacta a soporte.");
+        } else {
+          router.push("/Login?registered=true");
+        }
+      } else {
+        setGeneralError("Error al crear tu perfil. Por favor, contacta a soporte.");
+      }
+      setLoading(false);
+      return;
+    }
+
+    console.log("Usuario creado exitosamente");
+    router.push("/Login?registered=true");
+  }
+};
 
   const isFormValid = Object.keys(validateForm(form)).length === 0;
 
@@ -249,6 +345,13 @@ export default function RegisterPage() {
             <h1 className={styles.formTitle}>Crea tu cuenta</h1>
             <p className={styles.formSubtitle}>Únete gratis a la comunidad recicladora</p>
           </div>
+
+          {/* Error general */}
+          {generalError && (
+            <div className={styles.errorMessage}>
+              {generalError}
+            </div>
+          )}
 
           {/* Form */}
           <form className={styles.form} onSubmit={handleSubmit} noValidate>

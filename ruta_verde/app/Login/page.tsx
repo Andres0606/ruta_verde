@@ -3,18 +3,38 @@
 import styles from "../CSS/Login/Login.module.css";
 import Link from "next/link";
 import { useState } from "react";
-
-// ← Ya NO se importa Header, esta página es full-viewport sin navbar
+import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => setLoading(false), 1500);
+    setError(null);
+    
+    // Autenticación con Supabase
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email: form.email,
+      password: form.password,
+    });
+    
+    setLoading(false);
+    
+    if (authError) {
+      setError(authError.message);
+      return;
+    }
+    
+    if (data.user) {
+      // Redirigir al dashboard o home
+      router.push('/dashboard');
+    }
   };
 
   // Partículas generadas matemáticamente para evitar hidratación mismatch
@@ -159,6 +179,13 @@ export default function LoginPage() {
             <h1 className={styles.formTitle}>Bienvenido de nuevo</h1>
             <p className={styles.formSubtitle}>Ingresa a tu cuenta para continuar reciclando</p>
           </div>
+
+          {/* Mensaje de error */}
+          {error && (
+            <div className={styles.errorMessage}>
+              {error}
+            </div>
+          )}
 
           {/* Form */}
           <form className={styles.form} onSubmit={handleSubmit}>

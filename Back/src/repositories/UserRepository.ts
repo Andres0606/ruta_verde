@@ -1,4 +1,19 @@
-import { supabase, User } from '../config/supabase';
+import { supabase } from '../config/supabase';
+
+// Tipos (puedes importarlos desde config/supabase también)
+export interface User {
+  id: number;
+  email: string;
+  nombre: string;
+  avatar_url: string | null;
+  puntos_actuales: number | null;
+  nivel: number | null;
+  fecha_registro: string | null;
+  ciudad: string | null;
+  telefono: string | null;
+  rol: string | null;
+  auth_uuid: string | null;
+}
 
 // Tipo específico para ranking
 interface RankingUser {
@@ -62,11 +77,16 @@ export class UserRepository {
     const { data, error } = await supabase
       .from('users')
       .insert([{ 
-        ...user, 
-        fecha_registro: new Date().toISOString(), 
-        puntos_actuales: 0, 
+        email: user.email,
+        nombre: user.nombre,
+        auth_uuid: user.auth_uuid,
+        telefono: user.telefono || null,
+        avatar_url: user.avatar_url || null,
+        ciudad: user.ciudad || null,
+        puntos_actuales: 0,
         nivel: 1,
-        rol: 'usuario'
+        rol: 'ciudadano',
+        fecha_registro: new Date().toISOString()
       }])
       .select()
       .single();
