@@ -235,3 +235,61 @@
     gap: 12px;
   }
 }
+/* QR Section */
+.infoSection:last-child {
+  margin-bottom: 0;
+}
+
+.qrSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e8f5e9 100%);
+  border-radius: 20px;
+  margin-top: 16px;
+}
+
+.qrContainer {
+  background: white;
+  padding: 16px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  margin-bottom: 16px;
+  display: inline-block;
+}
+
+.qrDescription {
+  text-align: center;
+  color: #2d6a4f;
+  font-size: 14px;
+  margin-bottom: 16px;
+  max-width: 250px;
+}
+
+.downloadQrBtn {
+  padding: 10px 24px;
+  background: #74c69d;
+  color: #1a3d2b;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.downloadQrBtn:hover:not(:disabled) {
+  background: #40916c;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64,145,108,0.3);
+}
+
+.downloadQrBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

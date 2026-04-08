@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import styles from "../../CSS/Dashboard/Perfil.module.css";
 import dashboardStyles from "../../CSS/Dashboard/Dashboard.module.css";
-
+import { QRCodeSVG } from "qrcode.react";
 import AvatarUpload from "../../Components/AvatarUpload";
 
 interface UserData {
@@ -31,6 +31,8 @@ export default function PerfilPage() {
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const qrRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadUserData();
@@ -55,7 +57,7 @@ export default function PerfilPage() {
       console.error("Error cargando usuario:", error);
     } else if (userData) {
       setUser(userData);
-      setAvatarUrl(userData.avatar_url); // ← AGREGADO: Guardar avatar_url
+      setAvatarUrl(userData.avatar_url);
       setForm({
         nombre: userData.nombre || "",
         telefono: userData.telefono || "",
@@ -95,6 +97,49 @@ export default function PerfilPage() {
     }
 
     setSaving(false);
+  };
+
+  const downloadQR = async () => {
+    if (!qrRef.current) return;
+    
+    setDownloading(true);
+    
+    try {
+      const svg = qrRef.current.querySelector('svg');
+      if (!svg) return;
+      
+      // Crear un canvas para convertir SVG a PNG
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+        const pngUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `qr-${user?.nombre || 'usuario'}.png`;
+        link.href = pngUrl;
+        link.click();
+        URL.revokeObjectURL(url);
+        setDownloading(false);
+      };
+      
+      img.onerror = () => {
+        setDownloading(false);
+        alert('Error al generar la imagen');
+      };
+      
+      img.src = url;
+    } catch (error) {
+      console.error('Error al descargar QR:', error);
+      alert('Error al descargar el QR');
+      setDownloading(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -301,6 +346,35 @@ export default function PerfilPage() {
               <div className={styles.infoValue}>
                 {formatDate(user?.fecha_registro || "")}
               </div>
+            </div>
+          </div>
+
+          {/* Sección Mi QR */}
+          <div className={styles.infoSection}>
+            <h3>Mi QR de Reciclaje</h3>
+            <div className={styles.qrSection}>
+              <div className={styles.qrContainer} ref={qrRef}>
+                {user && (
+                  <QRCodeSVG 
+                    value={`${window.location.origin}/reciclar/${user.auth_uuid}`}
+                    size={180}
+                    bgColor="#ffffff"
+                    fgColor="#1a3d2b"
+                    level="H"
+                    includeMargin={true}
+                  />
+                )}
+              </div>
+              <p className={styles.qrDescription}>
+                Escanea este QR en las máquinas de reciclaje para recibir tus puntos
+              </p>
+              <button 
+                className={styles.downloadQrBtn}
+                onClick={downloadQR}
+                disabled={downloading}
+              >
+                {downloading ? "⏳ Generando..." : "📥 Descargar QR"}
+              </button>
             </div>
           </div>
         </div>
