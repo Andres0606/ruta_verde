@@ -3,41 +3,128 @@
 import styles from "../CSS/ranking/ranking.module.css";
 import Header from "../Components/header";
 import Footer from "../Components/footer";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
-const RANKING = [
-  { pos: 1,  nombre: "María Ospina",     ciudad: "Villavicencio", puntos: 4820, entregas: 241, avatar: "MO", insignias: 6, racha: 42, tendencia: "up" },
-  { pos: 2,  nombre: "Carlos Ríos",      ciudad: "Villavicencio", puntos: 4105, entregas: 198, avatar: "CR", insignias: 5, racha: 28, tendencia: "up" },
-  { pos: 3,  nombre: "Luisa Moreno",     ciudad: "Villavicencio", puntos: 3780, entregas: 175, avatar: "LM", insignias: 5, racha: 35, tendencia: "down" },
-  { pos: 4,  nombre: "Andrés Castro",    ciudad: "Villavicencio", puntos: 3240, entregas: 152, avatar: "AC", insignias: 4, racha: 14, tendencia: "up" },
-  { pos: 5,  nombre: "Sandra Peña",      ciudad: "Villavicencio", puntos: 2980, entregas: 139, avatar: "SP", insignias: 4, racha: 21, tendencia: "same" },
-  { pos: 6,  nombre: "Felipe Torres",    ciudad: "Villavicencio", puntos: 2740, entregas: 128, avatar: "FT", insignias: 3, racha: 10, tendencia: "up" },
-  { pos: 7,  nombre: "Diana Gómez",      ciudad: "Villavicencio", puntos: 2510, entregas: 115, avatar: "DG", insignias: 3, racha: 18, tendencia: "down" },
-  { pos: 8,  nombre: "Jorge Vargas",     ciudad: "Villavicencio", puntos: 2290, entregas: 104, avatar: "JV", insignias: 3, racha: 7,  tendencia: "same" },
-  { pos: 9,  nombre: "Valentina Cruz",   ciudad: "Villavicencio", puntos: 2105, entregas: 97,  avatar: "VC", insignias: 2, racha: 12, tendencia: "up" },
-  { pos: 10, nombre: "Roberto Niño",     ciudad: "Villavicencio", puntos: 1890, entregas: 88,  avatar: "RN", insignias: 2, racha: 9,  tendencia: "down" },
-  // Usuario actual fuera del top 10
-  { pos: 12, nombre: "Juan García",      ciudad: "Villavicencio", puntos: 1240, entregas: 47,  avatar: "JG", insignias: 3, racha: 7,  tendencia: "up", esYo: true },
-];
+interface RankingUser {
+  id: number;
+  nombre: string;
+  avatar_url: string | null;
+  puntos_actuales: number;
+  nivel: number;
+  email: string;
+}
 
-const MEDALLAS = ["🥇", "🥈", "🥉"];
-
-const COLORES_PODIO = [
-  "#f4c542", // oro
-  "#c0c0c0", // plata
-  "#cd7f32", // bronce
-];
+interface UsuarioActual extends RankingUser {
+  puesto: number;
+}
 
 type Periodo = "semana" | "mes" | "total";
 
 export default function RankingPage() {
   const [periodo, setPeriodo] = useState<Periodo>("total");
   const [hovered, setHovered] = useState<number | null>(null);
+  const [ranking, setRanking] = useState<RankingUser[]>([]);
+  const [usuarioActual, setUsuarioActual] = useState<UsuarioActual | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [totalResiduos, setTotalResiduos] = useState<{ [key: number]: number }>({});
 
-  const top10 = RANKING.filter((r) => !r.esYo).slice(0, 10);
-  const yo = RANKING.find((r) => r.esYo);
+  useEffect(() => {
+    cargarRanking();
+    cargarUsuarioActual();
+  }, [periodo]);
 
-  const maxPuntos = top10[0].puntos;
+  const cargarRanking = async () => {
+    setCargando(true);
+    
+    // Obtener usuarios ordenados por puntos
+    const { data: users, error } = await supabase
+      .from("users")
+      .select("id, nombre, avatar_url, puntos_actuales, nivel, email")
+      .order("puntos_actuales", { ascending: false })
+      .limit(50);
+    
+    if (error) {
+      console.error("Error cargando ranking:", error);
+    } else if (users) {
+      setRanking(users);
+      
+      // Cargar cantidad de residuos por usuario
+      await cargarResiduosPorUsuario(users.map(u => u.id));
+    }
+    
+    setCargando(false);
+  };
+
+  const cargarResiduosPorUsuario = async (usuarioIds: number[]) => {
+    const { data, error } = await supabase
+      .from("residuos")
+      .select("usuario_id")
+      .in("usuario_id", usuarioIds);
+    
+    if (error) {
+      console.error("Error cargando residuos:", error);
+    } else if (data) {
+      const conteo: { [key: number]: number } = {};
+      data.forEach(r => {
+        conteo[r.usuario_id] = (conteo[r.usuario_id] || 0) + 1;
+      });
+      setTotalResiduos(conteo);
+    }
+  };
+
+  const cargarUsuarioActual = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) return;
+    
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("id, nombre, avatar_url, puntos_actuales, nivel, email")
+      .eq("auth_uuid", session.user.id)
+      .single();
+    
+    if (error) {
+      console.error("Error cargando usuario actual:", error);
+    } else if (user) {
+      // Calcular puesto del usuario
+      const { data: puestoData } = await supabase
+        .from("users")
+        .select("id")
+        .gt("puntos_actuales", user.puntos_actuales || 0);
+      
+      const puesto = (puestoData?.length || 0) + 1;
+      setUsuarioActual({ ...user, puesto });
+    }
+  };
+
+  const getAvatarIniciales = (nombre: string): string => {
+    return nombre
+      .split(" ")
+      .map(p => p[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const top10 = ranking.slice(0, 10);
+  const maxPuntos = top10[0]?.puntos_actuales || 0;
+  const coloresPodio = ["#f4c542", "#c0c0c0", "#cd7f32"];
+
+  if (cargando) {
+    return (
+      <>
+        <Header currentPage="ranking" />
+        <main className={styles.main}>
+          <div className={styles.loadingContainer}>
+            <div className={styles.spinner} />
+            <p>Cargando ranking...</p>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
@@ -49,12 +136,17 @@ export default function RankingPage() {
           <div className={styles.topBarInner}>
             <div>
               <h1 className={styles.pageTitle}>Ranking Verde</h1>
-              <p className={styles.pageSubtitle}>Los 10 recicladores más activos de Villavicencio</p>
+              <p className={styles.pageSubtitle}>
+                Los {ranking.length} recicladores más activos de Villavicencio
+              </p>
             </div>
             <div className={styles.periodoSwitch}>
               {(["semana", "mes", "total"] as Periodo[]).map((p) => (
-                <button key={p} className={`${styles.periodoBtn} ${periodo === p ? styles.periodoBtnActive : ""}`}
-                  onClick={() => setPeriodo(p)}>
+                <button 
+                  key={p} 
+                  className={`${styles.periodoBtn} ${periodo === p ? styles.periodoBtnActive : ""}`}
+                  onClick={() => setPeriodo(p)}
+                >
                   {p === "semana" ? "Esta semana" : p === "mes" ? "Este mes" : "Histórico"}
                 </button>
               ))}
@@ -62,160 +154,200 @@ export default function RankingPage() {
           </div>
         </div>
 
-        <div className={styles.layout}>
-
-          {/* PODIO TOP 3 */}
-          <div className={styles.podioSection}>
-            <div className={styles.podioWrap}>
-              {/* 2do */}
-              <div className={styles.podioItem} data-pos="2">
-                <div className={styles.podioAvatar} style={{ borderColor: COLORES_PODIO[1] }}>
-                  {top10[1].avatar}
-                </div>
-                <div className={styles.podioMedalla}>🥈</div>
-                <div className={styles.podioNombre}>{top10[1].nombre}</div>
-                <div className={styles.podioPuntos}>{top10[1].puntos.toLocaleString()}</div>
-                <div className={styles.podioPedestal} style={{ background: COLORES_PODIO[1], height: 90 }}>
-                  <span className={styles.pedestalNum}>2</span>
-                </div>
-              </div>
-
-              {/* 1ro */}
-              <div className={styles.podioItem} data-pos="1">
-                <div className={styles.podioAura} />
-                <div className={styles.podioAvatar} style={{ borderColor: COLORES_PODIO[0], width: 72, height: 72, fontSize: 22 }}>
-                  {top10[0].avatar}
-                </div>
-                <div className={styles.podioMedalla} style={{ fontSize: 28 }}>🥇</div>
-                <div className={styles.podioNombre} style={{ fontWeight: 700, fontSize: 16 }}>{top10[0].nombre}</div>
-                <div className={styles.podioPuntos} style={{ fontSize: 20 }}>{top10[0].puntos.toLocaleString()}</div>
-                <div className={styles.podioPedestal} style={{ background: COLORES_PODIO[0], height: 130 }}>
-                  <span className={styles.pedestalNum}>1</span>
-                </div>
-              </div>
-
-              {/* 3ro */}
-              <div className={styles.podioItem} data-pos="3">
-                <div className={styles.podioAvatar} style={{ borderColor: COLORES_PODIO[2] }}>
-                  {top10[2].avatar}
-                </div>
-                <div className={styles.podioMedalla}>🥉</div>
-                <div className={styles.podioNombre}>{top10[2].nombre}</div>
-                <div className={styles.podioPuntos}>{top10[2].puntos.toLocaleString()}</div>
-                <div className={styles.podioPedestal} style={{ background: COLORES_PODIO[2], height: 68 }}>
-                  <span className={styles.pedestalNum}>3</span>
-                </div>
-              </div>
-            </div>
+        {top10.length === 0 ? (
+          <div className={styles.vacioContainer}>
+            <p>No hay usuarios registrados aún.</p>
+            <p>¡Sé el primero en comenzar a reciclar!</p>
           </div>
+        ) : (
+          <div className={styles.layout}>
 
-          {/* TABLA COMPLETA */}
-          <div className={styles.tablaSection}>
+            {/* PODIO TOP 3 */}
+            <div className={styles.podioSection}>
+              <div className={styles.podioWrap}>
+                {/* 2do lugar */}
+                {top10[1] && (
+                  <div className={styles.podioItem} data-pos="2">
+                    <div className={styles.podioAvatar} style={{ borderColor: coloresPodio[1] }}>
+                      {top10[1].avatar_url ? (
+                        <img src={top10[1].avatar_url} alt={top10[1].nombre} className={styles.podioAvatarImg} />
+                      ) : (
+                        getAvatarIniciales(top10[1].nombre)
+                      )}
+                    </div>
+                    <div className={styles.podioMedalla}>🥈</div>
+                    <div className={styles.podioNombre}>{top10[1].nombre.split(" ")[0]}</div>
+                    <div className={styles.podioPuntos}>{top10[1].puntos_actuales?.toLocaleString() || 0}</div>
+                    <div className={styles.podioPedestal} style={{ background: coloresPodio[1], height: 90 }}>
+                      <span className={styles.pedestalNum}>2</span>
+                    </div>
+                  </div>
+                )}
 
-            {/* Encabezado */}
-            <div className={styles.tablaHeader}>
-              <span className={styles.thPos}>#</span>
-              <span className={styles.thUsuario}>Usuario</span>
-              <span className={styles.thBarra}>Progreso</span>
-              <span className={styles.thPuntos}>EcoPuntos</span>
-              <span className={styles.thEntregas}>Entregas</span>
-              <span className={styles.thRacha}>Racha</span>
+                {/* 1er lugar */}
+                {top10[0] && (
+                  <div className={styles.podioItem} data-pos="1">
+                    <div className={styles.podioAura} />
+                    <div className={styles.podioAvatar} style={{ borderColor: coloresPodio[0], width: 72, height: 72, fontSize: 22 }}>
+                      {top10[0].avatar_url ? (
+                        <img src={top10[0].avatar_url} alt={top10[0].nombre} className={styles.podioAvatarImg} />
+                      ) : (
+                        getAvatarIniciales(top10[0].nombre)
+                      )}
+                    </div>
+                    <div className={styles.podioMedalla} style={{ fontSize: 28 }}>🥇</div>
+                    <div className={styles.podioNombre} style={{ fontWeight: 700, fontSize: 16 }}>{top10[0].nombre.split(" ")[0]}</div>
+                    <div className={styles.podioPuntos} style={{ fontSize: 20 }}>{top10[0].puntos_actuales?.toLocaleString() || 0}</div>
+                    <div className={styles.podioPedestal} style={{ background: coloresPodio[0], height: 130 }}>
+                      <span className={styles.pedestalNum}>1</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3er lugar */}
+                {top10[2] && (
+                  <div className={styles.podioItem} data-pos="3">
+                    <div className={styles.podioAvatar} style={{ borderColor: coloresPodio[2] }}>
+                      {top10[2].avatar_url ? (
+                        <img src={top10[2].avatar_url} alt={top10[2].nombre} className={styles.podioAvatarImg} />
+                      ) : (
+                        getAvatarIniciales(top10[2].nombre)
+                      )}
+                    </div>
+                    <div className={styles.podioMedalla}>🥉</div>
+                    <div className={styles.podioNombre}>{top10[2].nombre.split(" ")[0]}</div>
+                    <div className={styles.podioPuntos}>{top10[2].puntos_actuales?.toLocaleString() || 0}</div>
+                    <div className={styles.podioPedestal} style={{ background: coloresPodio[2], height: 68 }}>
+                      <span className={styles.pedestalNum}>3</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Filas top 10 */}
-            {top10.map((user, i) => {
-              const barPct = (user.puntos / maxPuntos) * 100;
-              const isTop3 = i < 3;
-              return (
-                <div key={user.pos}
-                  className={`${styles.tablaFila} ${isTop3 ? styles.filaDestacada : ""} ${hovered === user.pos ? styles.filaHovered : ""}`}
-                  style={{ animationDelay: `${i * 0.06}s` }}
-                  onMouseEnter={() => setHovered(user.pos)}
-                  onMouseLeave={() => setHovered(null)}>
+            {/* TABLA COMPLETA */}
+            <div className={styles.tablaSection}>
 
-                  <div className={styles.tdPos}>
-                    {i < 3 ? (
-                      <span className={styles.medalla} style={{ background: COLORES_PODIO[i] }}>{i + 1}</span>
+              {/* Encabezado */}
+              <div className={styles.tablaHeader}>
+                <span className={styles.thPos}>#</span>
+                <span className={styles.thUsuario}>Usuario</span>
+                <span className={styles.thBarra}>Progreso</span>
+                <span className={styles.thPuntos}>EcoPuntos</span>
+                <span className={styles.thEntregas}>Entregas</span>
+                <span className={styles.thNivel}>Nivel</span>
+              </div>
+
+              {/* Filas top 10 */}
+              {top10.map((user, i) => {
+                const barPct = maxPuntos > 0 ? (user.puntos_actuales / maxPuntos) * 100 : 0;
+                const isTop3 = i < 3;
+                return (
+                  <div key={user.id}
+                    className={`${styles.tablaFila} ${isTop3 ? styles.filaDestacada : ""} ${hovered === user.id ? styles.filaHovered : ""}`}
+                    style={{ animationDelay: `${i * 0.06}s` }}
+                    onMouseEnter={() => setHovered(user.id)}
+                    onMouseLeave={() => setHovered(null)}>
+
+                    <div className={styles.tdPos}>
+                      {i < 3 ? (
+                        <span className={styles.medalla} style={{ background: coloresPodio[i] }}>{i + 1}</span>
+                      ) : (
+                        <span className={styles.posNum}>{i + 1}</span>
+                      )}
+                    </div>
+
+                    <div className={styles.tdUsuario}>
+                      <div className={styles.filaAvatar} style={{ background: isTop3 ? coloresPodio[i] : "#74c69d" }}>
+                        {user.avatar_url ? (
+                          <img src={user.avatar_url} alt={user.nombre} className={styles.filaAvatarImg} />
+                        ) : (
+                          getAvatarIniciales(user.nombre)
+                        )}
+                      </div>
+                      <div>
+                        <div className={styles.filaNombre}>{user.nombre}</div>
+                        <div className={styles.filaCiudad}>📍 Villavicencio</div>
+                      </div>
+                    </div>
+
+                    <div className={styles.tdBarra}>
+                      <div className={styles.barraWrap}>
+                        <div className={styles.barraFill}
+                          style={{ width: `${barPct}%`, background: isTop3 ? coloresPodio[i] : "#74c69d" }} />
+                      </div>
+                    </div>
+
+                    <div className={styles.tdPuntos}>
+                      <span className={styles.puntosVal}>{user.puntos_actuales?.toLocaleString() || 0}</span>
+                      <span className={styles.puntosUnidad}>pts</span>
+                    </div>
+
+                    <div className={styles.tdEntregas}>{totalResiduos[user.id] || 0}</div>
+
+                    <div className={styles.tdNivel}>
+                      <span className={styles.nivelBadge}>Nivel {user.nivel || 1}</span>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Separador "tu posición" */}
+              {usuarioActual && usuarioActual.puesto > 10 && (
+                <>
+                  <div className={styles.separador}>
+                    <div className={styles.separadorLinea} />
+                    <span>Tu posición</span>
+                    <div className={styles.separadorLinea} />
+                  </div>
+
+                  <div className={`${styles.tablaFila} ${styles.filaMia}`} style={{ animationDelay: "0.65s" }}>
+                    <div className={styles.tdPos}>
+                      <span className={styles.posNum}>{usuarioActual.puesto}</span>
+                    </div>
+                    <div className={styles.tdUsuario}>
+                      <div className={styles.filaAvatar} style={{ background: "#74c69d" }}>
+                        {usuarioActual.avatar_url ? (
+                          <img src={usuarioActual.avatar_url} alt={usuarioActual.nombre} className={styles.filaAvatarImg} />
+                        ) : (
+                          getAvatarIniciales(usuarioActual.nombre)
+                        )}
+                      </div>
+                      <div>
+                        <div className={styles.filaNombre}>
+                          {usuarioActual.nombre} <span className={styles.tuChip}>Tú</span>
+                        </div>
+                        <div className={styles.filaCiudad}>📍 Villavicencio</div>
+                      </div>
+                    </div>
+                    <div className={styles.tdBarra}>
+                      <div className={styles.barraWrap}>
+                        <div className={styles.barraFill} style={{ width: `${(usuarioActual.puntos_actuales / maxPuntos) * 100}%`, background: "#74c69d" }} />
+                      </div>
+                    </div>
+                    <div className={styles.tdPuntos}>
+                      <span className={styles.puntosVal}>{usuarioActual.puntos_actuales?.toLocaleString() || 0}</span>
+                      <span className={styles.puntosUnidad}>pts</span>
+                    </div>
+                    <div className={styles.tdEntregas}>{totalResiduos[usuarioActual.id] || 0}</div>
+                    <div className={styles.tdNivel}>
+                      <span className={styles.nivelBadge}>Nivel {usuarioActual.nivel || 1}</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.metaChip}>
+                    <span>🎯</span>
+                    {usuarioActual.puesto <= 10 ? (
+                      `¡Felicidades! Estás en el top 10`
                     ) : (
-                      <span className={styles.posNum}>{user.pos}</span>
+                      `Necesitas ${(ranking[9]?.puntos_actuales - usuarioActual.puntos_actuales + 1).toLocaleString()} puntos más para entrar al top 10`
                     )}
                   </div>
-
-                  <div className={styles.tdUsuario}>
-                    <div className={styles.filaAvatar} style={{ background: isTop3 ? COLORES_PODIO[i] : undefined }}>
-                      {user.avatar}
-                    </div>
-                    <div>
-                      <div className={styles.filaNombre}>{user.nombre}</div>
-                      <div className={styles.filaCiudad}>📍 {user.ciudad}</div>
-                    </div>
-                  </div>
-
-                  <div className={styles.tdBarra}>
-                    <div className={styles.barraWrap}>
-                      <div className={styles.barraFill}
-                        style={{ width: `${barPct}%`, background: isTop3 ? COLORES_PODIO[i] : "var(--verde-medio)" }} />
-                    </div>
-                  </div>
-
-                  <div className={styles.tdPuntos}>
-                    <span className={styles.puntosVal}>{user.puntos.toLocaleString()}</span>
-                    <span className={styles.puntosUnidad}>pts</span>
-                  </div>
-
-                  <div className={styles.tdEntregas}>{user.entregas}</div>
-
-                  <div className={styles.tdRacha}>
-                    <span className={styles.rachaIcon}>🔥</span>
-                    {user.racha}d
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Separador "tu posición" */}
-            {yo && (
-              <>
-                <div className={styles.separador}>
-                  <div className={styles.separadorLinea} />
-                  <span>Tu posición</span>
-                  <div className={styles.separadorLinea} />
-                </div>
-
-                <div className={`${styles.tablaFila} ${styles.filaMia}`} style={{ animationDelay: "0.65s" }}>
-                  <div className={styles.tdPos}>
-                    <span className={styles.posNum}>{yo.pos}</span>
-                  </div>
-                  <div className={styles.tdUsuario}>
-                    <div className={styles.filaAvatar} style={{ background: "var(--verde-medio)" }}>
-                      {yo.avatar}
-                    </div>
-                    <div>
-                      <div className={styles.filaNombre}>{yo.nombre} <span className={styles.tuChip}>Tú</span></div>
-                      <div className={styles.filaCiudad}>📍 {yo.ciudad}</div>
-                    </div>
-                  </div>
-                  <div className={styles.tdBarra}>
-                    <div className={styles.barraWrap}>
-                      <div className={styles.barraFill} style={{ width: `${(yo.puntos / maxPuntos) * 100}%`, background: "var(--verde-medio)" }} />
-                    </div>
-                  </div>
-                  <div className={styles.tdPuntos}>
-                    <span className={styles.puntosVal}>{yo.puntos.toLocaleString()}</span>
-                    <span className={styles.puntosUnidad}>pts</span>
-                  </div>
-                  <div className={styles.tdEntregas}>{yo.entregas}</div>
-                  <div className={styles.tdRacha}><span className={styles.rachaIcon}>🔥</span>{yo.racha}d</div>
-                </div>
-
-                <div className={styles.metaChip}>
-                  <span>🎯</span>
-                  Necesitas <strong>{(top10[9].puntos - yo.puntos + 1).toLocaleString()} puntos</strong> más para entrar al top 10
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </main>
       <Footer />
     </>

@@ -316,3 +316,110 @@
     align-items: flex-start;
   }
 }
+/* Insignias Section */
+.insigniasCard {
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.insigniasCard h3 {
+  font-size: 18px;
+  color: #1a3d2b;
+  margin-bottom: 8px;
+}
+
+.insigniasSubtitle {
+  font-size: 13px;
+  color: #74c69d;
+  margin-bottom: 20px;
+}
+
+.insigniasSubtitle2 {
+  font-size: 14px;
+  color: #1a3d2b;
+  margin: 20px 0 12px 0;
+}
+
+.insigniasGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.insigniaItem {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.insigniaUnlocked {
+  background: linear-gradient(135deg, #e8f5e9 0%, #d1fae5 100%);
+  border: 1px solid #74c69d;
+}
+
+.insigniaLocked {
+  background: #f8f9fa;
+  border: 1px solid #e8f5e9;
+  opacity: 0.7;
+}
+
+.insigniaIcon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.insigniaInfo {
+  flex: 1;
+}
+
+.insigniaNombre {
+  font-weight: 600;
+  color: #1a3d2b;
+  margin-bottom: 4px;
+}
+
+.insigniaDescripcion {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.insigniaProgress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.insigniaProgressBar {
+  flex: 1;
+  height: 6px;
+  background: #e8f5e9;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.insigniaProgressFill {
+  height: 100%;
+  background: #74c69d;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.insigniaProgressText {
+  font-size: 11px;
+  color: #74c69d;
+  min-width: 35px;
+}
