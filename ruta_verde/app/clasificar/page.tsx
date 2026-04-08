@@ -511,27 +511,37 @@ export default function ClasificarPage() {
           {/* ── Panel lateral ── */}
           <div className={styles.sidePanel}>
 
+            {/* Tipos de residuos con colores de canecas */}
             <div className={styles.sideCard}>
-              <h3 className={styles.sideTitle}>Tipos de residuos</h3>
+              <h3 className={styles.sideTitle}>♻️ Tipos de residuos</h3>
               <div className={styles.tiposList}>
                 {[
-                  { emoji: "♻️", label: "Plástico", color: "#2563eb" },
-                  { emoji: "📦", label: "Cartón", color: "#92400e" },
-                  { emoji: "🍶", label: "Vidrio", color: "#0e7490" },
-                  { emoji: "🥫", label: "Metal", color: "#6b7280" },
-                  { emoji: "🌿", label: "Orgánico", color: "#15803d" },
+                  { emoji: "♻️", label: "Plástico", caneca: "Caneca Azul", color: "#2563eb", ejemplo: "Botellas, envases, bolsas" },
+                  { emoji: "📦", label: "Cartón y Papel", caneca: "Caneca Café", color: "#92400e", ejemplo: "Cajas, periódicos, cuadernos" },
+                  { emoji: "🍶", label: "Vidrio", caneca: "Caneca Verde", color: "#0e7490", ejemplo: "Botellas, frascos, tarros" },
+                  { emoji: "🥫", label: "Metal", caneca: "Caneca Gris", color: "#6b7280", ejemplo: "Latas, aluminio, acero" },
+                  { emoji: "🌿", label: "Orgánico", caneca: "Caneca Negra", color: "#15803d", ejemplo: "Restos de comida, cáscaras" },
+                  { emoji: "⚡", label: "Residuos Electrónicos", caneca: "Punto Limpio", color: "#dc2626", ejemplo: "Pilas, cables, celulares" },
+                  { emoji: "💊", label: "Residuos Peligrosos", caneca: "Punto Especial", color: "#f59e0b", ejemplo: "Químicos, medicamentos" },
                 ].map((t) => (
                   <div key={t.label} className={styles.tipoItem}>
                     <span className={styles.tipoEmoji}>{t.emoji}</span>
-                    <span className={styles.tipoLabel}>{t.label}</span>
-                    <div className={styles.tipoDot} style={{ background: t.color }} />
+                    <div className={styles.tipoInfo}>
+                      <div className={styles.tipoLabelRow}>
+                        <span className={styles.tipoLabel}>{t.label}</span>
+                        <span className={styles.canecaBadge} style={{ backgroundColor: t.color }}>
+                          {t.caneca}
+                        </span>
+                      </div>
+                      <span className={styles.tipoEjemplo}>{t.ejemplo}</span>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className={styles.sideCard}>
-              <h3 className={styles.sideTitle}>Tu progreso</h3>
+              <h3 className={styles.sideTitle}>📊 Tu progreso</h3>
               <div className={styles.sessionStats}>
                 <div className={styles.sessionStat}>
                   <span className={styles.sessionNum}>{usuario?.puntos_actuales || 0}</span>
@@ -544,10 +554,10 @@ export default function ClasificarPage() {
               </div>
             </div>
 
-            {/* ── Puntos de reciclaje ── */}
+            {/* Puntos de reciclaje */}
             <div className={styles.sideCard}>
               <h3 className={styles.sideTitle}>
-                Puntos de reciclaje
+                📍 Puntos de reciclaje
                 <span className={styles.puntosContadorInline}>({puntosFiltrados.length})</span>
               </h3>
 
@@ -649,7 +659,7 @@ export default function ClasificarPage() {
 
               {!cargandoPuntos && puntosReciclaje.length > 0 && (
                 <p className={styles.puntosHint}>
-                  Haz clic en un punto para ver más detalles
+                  💡 Haz clic en un punto para ver más detalles
                 </p>
               )}
             </div>

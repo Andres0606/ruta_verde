@@ -1050,3 +1050,78 @@
   text-align: center;
   margin: 10px 0 0;
 }
+
+/* ── TIPOS DE RESIDUOS MEJORADO ── */
+.tipoItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--blanco);
+  border: 1px solid var(--crema-oscuro);
+  transition: all 0.2s ease;
+  margin-bottom: 8px;
+}
+
+.tipoItem:hover {
+  transform: translateX(4px);
+  border-color: var(--verde-claro);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.tipoEmoji {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.tipoInfo {
+  flex: 1;
+}
+
+.tipoLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.tipoLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto-oscuro);
+}
+
+.canecaBadge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: white;
+  letter-spacing: 0.3px;
+}
+
+.tipoEjemplo {
+  font-size: 11px;
+  color: var(--texto-suave);
+  line-height: 1.4;
+  display: block;
+}
+
+/* Responsive para tipos */
+@media (max-width: 640px) {
+  .tipoLabelRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .tipoItem {
+    padding: 10px;
+  }
+  
+  .tipoEmoji {
+    font-size: 24px;
+  }
+}
