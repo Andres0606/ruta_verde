@@ -17,6 +17,12 @@ interface ResultadoReal {
   puntos: number;
   puntos_totales?: number;
   mensaje?: string;
+  consejo?: string;
+  emoji?: string;
+  puedeGenerarQR?: boolean;
+  qr_code?: string;
+  residuo_id?: number;
+  modelo_usado?: string;
 }
 
 export default function ClasificarPage() {
@@ -29,6 +35,9 @@ export default function ClasificarPage() {
   const [cargandoUsuario, setCargandoUsuario] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [modeloActivo, setModeloActivo] = useState<"simple" | "avanzado">("simple");
+  const [mostrarQR, setMostrarQR] = useState(false);
+  const [qrGenerado, setQrGenerado] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -123,6 +132,8 @@ export default function ClasificarPage() {
   const analizarConIA = async (file: File) => {
     setFase("analizando");
     setErrorMsg(null);
+    setMostrarQR(false);
+    setQrGenerado(null);
     
     if (!accessToken) {
       const { data: { session } } = await supabase.auth.getSession();
@@ -136,6 +147,7 @@ export default function ClasificarPage() {
     
     const formData = new FormData();
     formData.append('image', file);
+    formData.append('modelo', modeloActivo);
 
     try {
       const response = await fetch('/api/predict', {
@@ -157,6 +169,11 @@ export default function ClasificarPage() {
       setResultado(data);
       setFase("resultado");
       
+      // Si puede generar QR, guardar el código
+      if (data.puedeGenerarQR && data.qr_code) {
+        setQrGenerado(data.qr_code);
+      }
+      
       if (data.puntos_totales !== undefined && usuario) {
         setUsuario({ ...usuario, puntos_actuales: data.puntos_totales });
       }
@@ -174,10 +191,42 @@ export default function ClasificarPage() {
     setResultado(null);
     setFotoUrl(null);
     setErrorMsg(null);
+    setMostrarQR(false);
+    setQrGenerado(null);
   };
 
   const generarQR = () => {
-    alert('Funcionalidad en desarrollo');
+    if (qrGenerado) {
+      setMostrarQR(true);
+      // También puedes abrir una ventana con el QR
+      // const qrUrl = `/api/qr?data=${qrGenerado}`;
+      // window.open(qrUrl, '_blank');
+    } else if (resultado?.puedeGenerarQR === false) {
+      alert(`⚠️ No se puede generar QR. La confianza es ${resultado.confianza}% (mínimo 80% requerido).`);
+    } else if (resultado?.confianza && resultado.confianza < 80) {
+      alert(`⚠️ Confianza baja (${resultado.confianza}%). Se requiere mínimo 80% para generar QR.`);
+    } else {
+      alert('No hay un QR disponible para este residuo.');
+    }
+  };
+
+  const getEmojiPorTipo = (tipo: string, categoriaOriginal?: string): string => {
+    if (categoriaOriginal === 'GLASS') return '🍶';
+    if (categoriaOriginal === 'PLASTIC') return '♻️';
+    if (categoriaOriginal === 'PAPER') return '📄';
+    if (categoriaOriginal === 'METAL') return '🥫';
+    if (categoriaOriginal === 'ORGANIC') return '🌿';
+    if (categoriaOriginal === 'CARDBOARD') return '📦';
+    if (categoriaOriginal === 'PET') return '🥤';
+    if (categoriaOriginal === 'ALUMINUM') return '🥫';
+    
+    if (tipo === 'Vidrio') return '🍶';
+    if (tipo === 'Plástico') return '♻️';
+    if (tipo === 'Papel') return '📄';
+    if (tipo === 'Metal') return '🥫';
+    if (tipo === 'Orgánico') return '🌿';
+    if (tipo === 'Cartón') return '📦';
+    return '♻️';
   };
 
   /* Drag & Drop */
@@ -186,42 +235,7 @@ export default function ClasificarPage() {
     setArrastrar(false);
     const file = e.dataTransfer.files[0];
     if (file?.type.startsWith("image/")) subirImagen(file);
-  }, [accessToken]);
-
-  /* 🔴 BOTÓN DE PRUEBA - Función para probar la API */
-  const probarAPI = async () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async (e: any) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        alert('No hay sesión activa');
-        return;
-      }
-      
-      try {
-        const res = await fetch('/api/predict', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${session.access_token}` },
-          body: formData
-        });
-        const data = await res.json();
-        
-        // 🔴 MUESTRA LA RESPUESTA CRUDA
-        alert(JSON.stringify(data, null, 2));
-      } catch (error) {
-        alert('Error: ' + String(error));
-      }
-    };
-    input.click();
-  };
+  }, [accessToken, modeloActivo]);
 
   if (cargandoUsuario) {
     return (
@@ -280,6 +294,34 @@ export default function ClasificarPage() {
                 </div>
                 <h2 className={styles.dropTitle}>Fotografía tu residuo</h2>
                 <p className={styles.dropHint}>Arrastra una imagen aquí o elige una opción</p>
+
+                {/* Selector de modelo */}
+                <div className={styles.modelSelector}>
+                  <label className={`${styles.modelLabel} ${modeloActivo === "simple" ? styles.modelActive : ""}`}>
+                    <input
+                      type="radio"
+                      value="simple"
+                      checked={modeloActivo === "simple"}
+                      onChange={() => setModeloActivo("simple")}
+                    />
+                    <div className={styles.modelInfo}>
+                      <span className={styles.modelName}>🔍 Modelo Simple</span>
+                      <small>Plástico, Papel, Vidrio, Metal, Orgánico</small>
+                    </div>
+                  </label>
+                  <label className={`${styles.modelLabel} ${modeloActivo === "avanzado" ? styles.modelActive : ""}`}>
+                    <input
+                      type="radio"
+                      value="avanzado"
+                      checked={modeloActivo === "avanzado"}
+                      onChange={() => setModeloActivo("avanzado")}
+                    />
+                    <div className={styles.modelInfo}>
+                      <span className={styles.modelName}>🎯 Modelo Avanzado</span>
+                      <small>PET, HDPE, PVC, LDPE, PP, PS, Aluminio, Acero...</small>
+                    </div>
+                  </label>
+                </div>
 
                 <div className={styles.dropActions}>
                   <button className={styles.btnCamera} onClick={abrirCamara}>
@@ -346,7 +388,9 @@ export default function ClasificarPage() {
                       </svg>
                     </div>
                   </div>
-                  <p className={styles.analyzeLabel}>Analizando residuo con IA...</p>
+                  <p className={styles.analyzeLabel}>
+                    Analizando con {modeloActivo === "simple" ? "Modelo Simple" : "Modelo Avanzado"}...
+                  </p>
                   <div className={styles.analyzeDots}>
                     <div /><div /><div />
                   </div>
@@ -360,9 +404,9 @@ export default function ClasificarPage() {
                   <div className={styles.resultImageWrap}>
                     <img src={fotoUrl} alt="Residuo" className={styles.resultImage} />
                     <div className={styles.resultBadgeImg}>
-                      <span style={{ fontSize: 28 }}>{resultado.tipo === 'Vidrio' ? '🍶' : resultado.tipo === 'Plástico' ? '♻️' : resultado.tipo === 'Papel / Cartón' ? '📦' : resultado.tipo === 'Metal' ? '🥫' : '🌿'}</span>
+                      <span style={{ fontSize: 28 }}>{resultado.emoji || getEmojiPorTipo(resultado.tipo, resultado.categoria_original)}</span>
                     </div>
-                    <div className={styles.confianzaBadge}>
+                    <div className={`${styles.confianzaBadge} ${resultado.confianza >= 80 ? styles.confianzaAlta : styles.confianzaBaja}`}>
                       {resultado.confianza}% confianza
                     </div>
                   </div>
@@ -375,7 +419,12 @@ export default function ClasificarPage() {
                         {resultado.categoria_original === 'GLASS' ? 'Vidrio' : 
                          resultado.categoria_original === 'PAPER' ? 'Papel' :
                          resultado.categoria_original === 'PLASTIC' ? 'Plástico' :
-                         resultado.categoria_original === 'METAL' ? 'Metal' : 'Orgánico'}
+                         resultado.categoria_original === 'METAL' ? 'Metal' : 
+                         resultado.categoria_original === 'ORGANIC' ? 'Orgánico' :
+                         resultado.categoria_original === 'CARDBOARD' ? 'Cartón' :
+                         resultado.categoria_original === 'PET' ? 'PET' :
+                         resultado.categoria_original === 'ALUMINUM' ? 'Aluminio' :
+                         resultado.tipo}
                       </div>
                       <h2 className={styles.resultTipo}>{resultado.tipo}</h2>
                     </div>
@@ -387,16 +436,49 @@ export default function ClasificarPage() {
 
                   <div className={styles.resultConsejo}>
                     <div className={styles.consejoIcon}>💡</div>
-                    <p>{resultado.mensaje || `¡Es ${resultado.tipo}!`}</p>
+                    <p>{resultado.consejo || resultado.mensaje || `¡Es ${resultado.tipo}!`}</p>
                   </div>
 
+                  {/* Mostrar advertencia si confianza < 80% */}
+                  {resultado.confianza < 80 && (
+                    <div className={styles.warningBanner}>
+                      ⚠️ Confianza baja ({resultado.confianza}%). Se requiere mínimo 80% para generar QR.
+                    </div>
+                  )}
+
+                  {/* Mostrar QR si está disponible */}
+                  {mostrarQR && qrGenerado && (
+                    <div className={styles.qrContainer}>
+                      <div className={styles.qrCard}>
+                        <h4>📱 Código QR de entrega</h4>
+                        <div className={styles.qrCode}>
+                          {qrGenerado}
+                        </div>
+                        <p>Presenta este código en el punto de reciclaje</p>
+                        <button 
+                          className={styles.btnCopiar}
+                          onClick={() => {
+                            navigator.clipboard.writeText(qrGenerado);
+                            alert('Código copiado');
+                          }}
+                        >
+                          📋 Copiar código
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className={styles.resultActions}>
-                    <button className={styles.btnQR} onClick={generarQR}>
+                    <button 
+                      className={`${styles.btnQR} ${resultado.confianza < 80 ? styles.btnDisabled : ""}`}
+                      onClick={generarQR}
+                      disabled={resultado.confianza < 80}
+                    >
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
                         <rect x="3" y="14" width="7" height="7"/><path d="M14 14h.01M14 17h.01M17 14h.01M21 14h.01M21 17h1v1h-1M17 17h1v4M14 21h3"/>
                       </svg>
-                      Generar QR de entrega
+                      {resultado.confianza >= 80 ? "Generar QR de entrega" : "Confianza insuficiente"}
                     </button>
                     <button className={styles.btnReintentar} onClick={reiniciar}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -404,6 +486,11 @@ export default function ClasificarPage() {
                       </svg>
                       Clasificar otro
                     </button>
+                  </div>
+
+                  {/* Mostrar modelo usado */}
+                  <div className={styles.modelInfoFooter}>
+                    <small>🔬 Clasificado con: {resultado.modelo_usado || (modeloActivo === "simple" ? "Modelo Simple" : "Modelo Avanzado")}</small>
                   </div>
                 </div>
               </div>
