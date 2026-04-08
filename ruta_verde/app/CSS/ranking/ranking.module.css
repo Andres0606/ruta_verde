@@ -330,3 +330,83 @@
   .thBarra, .tdBarra, .thEntregas, .tdEntregas { display: none; }
   .periodoSwitch { flex-wrap: wrap; }
 }
+/* Loading */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e8f5e9;
+  border-top-color: #74c69d;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vacioContainer {
+  text-align: center;
+  padding: 80px 20px;
+  background: white;
+  border-radius: 24px;
+  margin: 32px;
+  color: #666;
+}
+
+.vacioContainer p:first-child {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+/* Avatar imágenes */
+.podioAvatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.filaAvatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Nivel badge */
+.tdNivel {
+  text-align: right;
+  width: 80px;
+}
+
+.nivelBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #e8f5e9;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a3d2b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .tdNivel {
+    display: none;
+  }
+  
+  .thNivel {
+    display: none;
+  }
+}
