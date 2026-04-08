@@ -25,6 +25,20 @@ interface ResultadoReal {
   modelo_usado?: string;
 }
 
+interface PuntoReciclaje {
+  id: number;
+  nombre: string;
+  direccion: string | null;
+  latitud: number | null;
+  longitud: number | null;
+  horario_atencion: string | null;
+  contacto_telefono: string | null;
+  contacto_email: string | null;
+  tipo: string | null;
+  activo: boolean | null;
+  Comuna: string;
+}
+
 export default function ClasificarPage() {
   const router = useRouter();
   const [fase, setFase] = useState<Fase>("idle");
@@ -38,13 +52,38 @@ export default function ClasificarPage() {
   const [modeloActivo, setModeloActivo] = useState<"simple" | "avanzado">("simple");
   const [mostrarQR, setMostrarQR] = useState(false);
   const [qrGenerado, setQrGenerado] = useState<string | null>(null);
+  const [puntosReciclaje, setPuntosReciclaje] = useState<PuntoReciclaje[]>([]);
+  const [cargandoPuntos, setCargandoPuntos] = useState(true);
+  const [comunaFiltro, setComunaFiltro] = useState<string>("todas");
+  const [puntoExpandido, setPuntoExpandido] = useState<number | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Verificar autenticación al cargar
+  const cargarPuntosReciclaje = async () => {
+    setCargandoPuntos(true);
+    try {
+      const { data: puntos, error } = await supabase
+        .from('puntos_reciclaje')
+        .select('*')
+        .eq('activo', true);
+
+      if (error) {
+        console.error('Error al cargar puntos:', error);
+        setPuntosReciclaje([]);
+      } else {
+        setPuntosReciclaje(puntos || []);
+      }
+    } catch (error) {
+      console.error('Error inesperado:', error);
+      setPuntosReciclaje([]);
+    } finally {
+      setCargandoPuntos(false);
+    }
+  };
+
   useEffect(() => {
     const verificarAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -52,21 +91,22 @@ export default function ClasificarPage() {
         router.push('/Login');
         return;
       }
-      
+
       setAccessToken(session.access_token);
-      
+
       const { data: dbUser } = await supabase
         .from('users')
         .select('*')
         .eq('auth_uuid', session.user.id)
         .single();
-      
+
       setUsuario(dbUser);
+      await cargarPuntosReciclaje();
       setCargandoUsuario(false);
     };
-    
+
     verificarAuth();
-    
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         setAccessToken(session.access_token);
@@ -74,11 +114,16 @@ export default function ClasificarPage() {
         router.push('/Login');
       }
     });
-    
+
     return () => subscription.unsubscribe();
   }, [router]);
 
-  /* Abrir cámara */
+  const comunasUnicas = ["todas", ...Array.from(new Set(puntosReciclaje.map(p => p.Comuna)))];
+
+  const puntosFiltrados = comunaFiltro === "todas"
+    ? puntosReciclaje
+    : puntosReciclaje.filter(p => p.Comuna === comunaFiltro);
+
   const abrirCamara = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
@@ -99,7 +144,6 @@ export default function ClasificarPage() {
     setFase("idle");
   };
 
-  /* Capturar foto */
   const capturar = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -107,7 +151,7 @@ export default function ClasificarPage() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext("2d")?.drawImage(video, 0, 0);
-    
+
     canvas.toBlob(async (blob) => {
       if (blob) {
         const file = new File([blob], "foto.jpg", { type: "image/jpeg" });
@@ -118,7 +162,6 @@ export default function ClasificarPage() {
     }, "image/jpeg", 0.9);
   };
 
-  /* Subir imagen */
   const subirImagen = async (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -128,13 +171,12 @@ export default function ClasificarPage() {
     await analizarConIA(file);
   };
 
-  /* Análisis con IA */
   const analizarConIA = async (file: File) => {
     setFase("analizando");
     setErrorMsg(null);
     setMostrarQR(false);
     setQrGenerado(null);
-    
+
     if (!accessToken) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -144,7 +186,7 @@ export default function ClasificarPage() {
       }
       setAccessToken(session.access_token);
     }
-    
+
     const formData = new FormData();
     formData.append('image', file);
     formData.append('modelo', modeloActivo);
@@ -152,9 +194,7 @@ export default function ClasificarPage() {
     try {
       const response = await fetch('/api/predict', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
+        headers: { 'Authorization': `Bearer ${accessToken}` },
         body: formData,
       });
 
@@ -164,22 +204,18 @@ export default function ClasificarPage() {
         throw new Error(data.error || 'Error al analizar la imagen');
       }
 
-      console.log('🔴 RESPUESTA DE LA API:', data);
-      
       setResultado(data);
       setFase("resultado");
-      
-      // Si puede generar QR, guardar el código
+
       if (data.puedeGenerarQR && data.qr_code) {
         setQrGenerado(data.qr_code);
       }
-      
+
       if (data.puntos_totales !== undefined && usuario) {
         setUsuario({ ...usuario, puntos_actuales: data.puntos_totales });
       }
-      
+
     } catch (error) {
-      console.error('Error:', error);
       setErrorMsg(error instanceof Error ? error.message : 'Error al analizar. Intenta de nuevo.');
       setFase("idle");
       setFotoUrl(null);
@@ -198,12 +234,7 @@ export default function ClasificarPage() {
   const generarQR = () => {
     if (qrGenerado) {
       setMostrarQR(true);
-      // También puedes abrir una ventana con el QR
-      // const qrUrl = `/api/qr?data=${qrGenerado}`;
-      // window.open(qrUrl, '_blank');
-    } else if (resultado?.puedeGenerarQR === false) {
-      alert(`⚠️ No se puede generar QR. La confianza es ${resultado.confianza}% (mínimo 80% requerido).`);
-    } else if (resultado?.confianza && resultado.confianza < 80) {
+    } else if (resultado?.puedeGenerarQR === false || (resultado?.confianza && resultado.confianza < 80)) {
       alert(`⚠️ Confianza baja (${resultado.confianza}%). Se requiere mínimo 80% para generar QR.`);
     } else {
       alert('No hay un QR disponible para este residuo.');
@@ -219,7 +250,6 @@ export default function ClasificarPage() {
     if (categoriaOriginal === 'CARDBOARD') return '📦';
     if (categoriaOriginal === 'PET') return '🥤';
     if (categoriaOriginal === 'ALUMINUM') return '🥫';
-    
     if (tipo === 'Vidrio') return '🍶';
     if (tipo === 'Plástico') return '♻️';
     if (tipo === 'Papel') return '📄';
@@ -229,7 +259,6 @@ export default function ClasificarPage() {
     return '♻️';
   };
 
-  /* Drag & Drop */
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setArrastrar(false);
@@ -262,21 +291,22 @@ export default function ClasificarPage() {
             </div>
             <div className={styles.topBadge}>
               <span>🤖</span> IA activa
-              {usuario && <span style={{ marginLeft: 12, background: '#2d6a4f', padding: '4px 8px', borderRadius: 20 }}>
-                🪙 {usuario.puntos_actuales || 0} pts
-              </span>}
+              {usuario && (
+                <span style={{ marginLeft: 12, background: '#2d6a4f', padding: '4px 8px', borderRadius: 20 }}>
+                  🪙 {usuario.puntos_actuales || 0} pts
+                </span>
+              )}
             </div>
           </div>
         </div>
 
         {errorMsg && (
-          <div className={styles.errorBanner}>
-            ⚠️ {errorMsg}
-          </div>
+          <div className={styles.errorBanner}>⚠️ {errorMsg}</div>
         )}
 
         <div className={styles.layout}>
 
+          {/* ── Panel principal ── */}
           <div className={styles.mainPanel}>
 
             {fase === "idle" && (
@@ -295,27 +325,16 @@ export default function ClasificarPage() {
                 <h2 className={styles.dropTitle}>Fotografía tu residuo</h2>
                 <p className={styles.dropHint}>Arrastra una imagen aquí o elige una opción</p>
 
-                {/* Selector de modelo */}
                 <div className={styles.modelSelector}>
                   <label className={`${styles.modelLabel} ${modeloActivo === "simple" ? styles.modelActive : ""}`}>
-                    <input
-                      type="radio"
-                      value="simple"
-                      checked={modeloActivo === "simple"}
-                      onChange={() => setModeloActivo("simple")}
-                    />
+                    <input type="radio" value="simple" checked={modeloActivo === "simple"} onChange={() => setModeloActivo("simple")} />
                     <div className={styles.modelInfo}>
                       <span className={styles.modelName}>🔍 Modelo Simple</span>
                       <small>Plástico, Papel, Vidrio, Metal, Orgánico</small>
                     </div>
                   </label>
                   <label className={`${styles.modelLabel} ${modeloActivo === "avanzado" ? styles.modelActive : ""}`}>
-                    <input
-                      type="radio"
-                      value="avanzado"
-                      checked={modeloActivo === "avanzado"}
-                      onChange={() => setModeloActivo("avanzado")}
-                    />
+                    <input type="radio" value="avanzado" checked={modeloActivo === "avanzado"} onChange={() => setModeloActivo("avanzado")} />
                     <div className={styles.modelInfo}>
                       <span className={styles.modelName}>🎯 Modelo Avanzado</span>
                       <small>PET, HDPE, PVC, LDPE, PP, PS, Aluminio, Acero...</small>
@@ -416,10 +435,10 @@ export default function ClasificarPage() {
                   <div className={styles.resultHeader}>
                     <div>
                       <div className={styles.resultCat}>
-                        {resultado.categoria_original === 'GLASS' ? 'Vidrio' : 
+                        {resultado.categoria_original === 'GLASS' ? 'Vidrio' :
                          resultado.categoria_original === 'PAPER' ? 'Papel' :
                          resultado.categoria_original === 'PLASTIC' ? 'Plástico' :
-                         resultado.categoria_original === 'METAL' ? 'Metal' : 
+                         resultado.categoria_original === 'METAL' ? 'Metal' :
                          resultado.categoria_original === 'ORGANIC' ? 'Orgánico' :
                          resultado.categoria_original === 'CARDBOARD' ? 'Cartón' :
                          resultado.categoria_original === 'PET' ? 'PET' :
@@ -439,28 +458,21 @@ export default function ClasificarPage() {
                     <p>{resultado.consejo || resultado.mensaje || `¡Es ${resultado.tipo}!`}</p>
                   </div>
 
-                  {/* Mostrar advertencia si confianza < 80% */}
                   {resultado.confianza < 80 && (
                     <div className={styles.warningBanner}>
                       ⚠️ Confianza baja ({resultado.confianza}%). Se requiere mínimo 80% para generar QR.
                     </div>
                   )}
 
-                  {/* Mostrar QR si está disponible */}
                   {mostrarQR && qrGenerado && (
                     <div className={styles.qrContainer}>
                       <div className={styles.qrCard}>
                         <h4>📱 Código QR de entrega</h4>
-                        <div className={styles.qrCode}>
-                          {qrGenerado}
-                        </div>
+                        <div className={styles.qrCode}>{qrGenerado}</div>
                         <p>Presenta este código en el punto de reciclaje</p>
-                        <button 
+                        <button
                           className={styles.btnCopiar}
-                          onClick={() => {
-                            navigator.clipboard.writeText(qrGenerado);
-                            alert('Código copiado');
-                          }}
+                          onClick={() => { navigator.clipboard.writeText(qrGenerado); alert('Código copiado'); }}
                         >
                           📋 Copiar código
                         </button>
@@ -469,7 +481,7 @@ export default function ClasificarPage() {
                   )}
 
                   <div className={styles.resultActions}>
-                    <button 
+                    <button
                       className={`${styles.btnQR} ${resultado.confianza < 80 ? styles.btnDisabled : ""}`}
                       onClick={generarQR}
                       disabled={resultado.confianza < 80}
@@ -488,7 +500,6 @@ export default function ClasificarPage() {
                     </button>
                   </div>
 
-                  {/* Mostrar modelo usado */}
                   <div className={styles.modelInfoFooter}>
                     <small>🔬 Clasificado con: {resultado.modelo_usado || (modeloActivo === "simple" ? "Modelo Simple" : "Modelo Avanzado")}</small>
                   </div>
@@ -497,7 +508,9 @@ export default function ClasificarPage() {
             )}
           </div>
 
+          {/* ── Panel lateral ── */}
           <div className={styles.sidePanel}>
+
             <div className={styles.sideCard}>
               <h3 className={styles.sideTitle}>Tipos de residuos</h3>
               <div className={styles.tiposList}>
@@ -531,10 +544,121 @@ export default function ClasificarPage() {
               </div>
             </div>
 
+            {/* ── Puntos de reciclaje ── */}
+            <div className={styles.sideCard}>
+              <h3 className={styles.sideTitle}>
+                Puntos de reciclaje
+                <span className={styles.puntosContadorInline}>({puntosFiltrados.length})</span>
+              </h3>
+
+              {puntosReciclaje.length > 0 && (
+                <select
+                  className={styles.puntosSelect}
+                  value={comunaFiltro}
+                  onChange={(e) => {
+                    setComunaFiltro(e.target.value);
+                    setPuntoExpandido(null);
+                  }}
+                >
+                  {comunasUnicas.map((comuna) => (
+                    <option key={comuna} value={comuna}>
+                      {comuna === "todas" ? "Todas las comunas" : comuna}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {cargandoPuntos && (
+                <div className={styles.puntosCargando}>
+                  <div className={styles.puntosCargandoSpinner} />
+                  Cargando puntos...
+                </div>
+              )}
+
+              {!cargandoPuntos && (
+                <div className={styles.puntosList}>
+                  {puntosFiltrados.length === 0 && (
+                    <p className={styles.puntosVacio}>No hay puntos disponibles en esta comuna.</p>
+                  )}
+
+                  {puntosFiltrados.map((punto) => (
+                    <div
+                      key={punto.id}
+                      className={`${styles.puntoItem} ${puntoExpandido === punto.id ? styles.puntoItemActivo : ""}`}
+                      onClick={() => setPuntoExpandido(puntoExpandido === punto.id ? null : punto.id)}
+                    >
+                      <div className={styles.puntoItemHeader}>
+                        <div>
+                          <p className={styles.puntoNombre}>{punto.nombre}</p>
+                          <p className={styles.puntoComuna}>{punto.Comuna}</p>
+                        </div>
+                        <span className={`${styles.puntoChevron} ${puntoExpandido === punto.id ? styles.puntoChevronAbierto : ""}`}>
+                          ▼
+                        </span>
+                      </div>
+
+                      {puntoExpandido === punto.id && (
+                        <div className={styles.puntoDetalle}>
+                          {punto.direccion && (
+                            <div className={styles.puntoDetalleRow}>
+                              <span className={styles.puntoDetalleIcon}>📍</span>
+                              <p className={styles.puntoDetalleTexto}>{punto.direccion}</p>
+                            </div>
+                          )}
+                          {punto.tipo && (
+                            <div className={styles.puntoDetalleRow}>
+                              <span className={styles.puntoDetalleIcon}>🏷️</span>
+                              <p className={styles.puntoDetalleTexto} style={{ textTransform: "capitalize" }}>{punto.tipo}</p>
+                            </div>
+                          )}
+                          {punto.horario_atencion && (
+                            <div className={styles.puntoDetalleRow}>
+                              <span className={styles.puntoDetalleIcon}>🕐</span>
+                              <p className={styles.puntoDetalleTexto}>{punto.horario_atencion}</p>
+                            </div>
+                          )}
+                          {punto.contacto_telefono && (
+                            <div className={styles.puntoDetalleRow}>
+                              <span className={styles.puntoDetalleIcon}>📞</span>
+                              <p className={styles.puntoDetalleTexto}>{punto.contacto_telefono}</p>
+                            </div>
+                          )}
+                          {punto.contacto_email && (
+                            <div className={styles.puntoDetalleRow}>
+                              <span className={styles.puntoDetalleIcon}>✉️</span>
+                              <p className={styles.puntoDetalleTexto}>{punto.contacto_email}</p>
+                            </div>
+                          )}
+                          {punto.latitud && punto.longitud && (
+                            <button
+                              className={styles.puntoMapaBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(`https://maps.google.com/?q=${punto.latitud},${punto.longitud}`, '_blank');
+                              }}
+                            >
+                              🗺️ Abrir en Google Maps
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!cargandoPuntos && puntosReciclaje.length > 0 && (
+                <p className={styles.puntosHint}>
+                  Haz clic en un punto para ver más detalles
+                </p>
+              )}
+            </div>
+
             <div className={styles.tipCard}>
               <div className={styles.tipEmoji}>🌳</div>
               <p>Reciclar <strong>1 kg de plástico</strong> puede ahorrar hasta <strong>2 kg de CO₂</strong></p>
             </div>
+
           </div>
         </div>
       </main>

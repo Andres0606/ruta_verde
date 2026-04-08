@@ -65,9 +65,9 @@ export interface PuntoReciclaje {
   horario_atencion: string | null;
   contacto_telefono: string | null;
   contacto_email: string | null;
-  imagen_url: string | null;
   tipo: string | null;
   activo: boolean | null;
+  Comuna: string;
 }
 
 export interface HistorialPunto {
