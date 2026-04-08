@@ -27,6 +27,7 @@
   font-family: "DM Sans", sans-serif;
   background: var(--crema);
   min-height: 100vh;
+  padding-top: 80px;
 }
 
 /* TOP BAR */
