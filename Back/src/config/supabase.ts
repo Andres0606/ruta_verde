@@ -34,14 +34,15 @@ export interface CategoriaResiduo {
 export interface Residuo {
   id: number;
   usuario_id: number;
-  categoria_id: number;
-  imagen_url: string | null;
-  descripcion: string | null;
-  peso_estimado_kg: number | null;
+  categoria_id: number | null;
   fecha_registro: string | null;
   estado: string | null;
-  qr_code: string | null;
   puntos_otorgados: number | null;
+  metodo_clasificacion: string | null;
+  imagen_url?: string | null;
+  descripcion?: string | null;
+  peso_estimado_kg?: number | null;
+  qr_code?: string | null;
 }
 
 export interface Entrega {

@@ -228,139 +228,158 @@ export default function ClasificarPage() {
     }
   };
 
-  // ✅ FUNCIÓN PARA VERIFICAR QR - AQUÍ SE SUMAN LOS PUNTOS (PUNTO DE RECICLAJE)
-  const verificarQRCode = async (codigoQR: string) => {
-    setVerificandoQR(true);
-    setMensajeQR(null);
+  // Función para verificar QR y sumar puntos al usuario (PUNTO DE RECICLAJE)
+const verificarQRCode = async (codigoQR: string) => {
+  setVerificandoQR(true);
+  setMensajeQR(null);
+  
+  try {
+    console.log("🔍 Código QR escaneado:", codigoQR);
     
-    try {
-      console.log("🔍 Código QR escaneado:", codigoQR);
-      
-      // Limpiar el código QR y extraer el UUID
-      let usuarioUUID = codigoQR.trim();
-      const uuidRegex = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i;
-      const match = usuarioUUID.match(uuidRegex);
-      if (match) {
-        usuarioUUID = match[0];
-      }
-      
-      console.log("📌 UUID extraído:", usuarioUUID);
-      
-      // Buscar al usuario dueño del QR
-      const { data: usuarioDuenno, error: usuarioError } = await supabase
-        .from('users')
-        .select('id, nombre, puntos_actuales, auth_uuid')
-        .eq('auth_uuid', usuarioUUID)
-        .single();
-
-      if (usuarioError || !usuarioDuenno) {
-        setMensajeQR({ 
-          texto: `❌ Usuario no encontrado. El código QR no es válido.`, 
-          tipo: "error" 
-        });
-        setVerificandoQR(false);
-        return;
-      }
-
-      console.log("✅ Usuario encontrado:", usuarioDuenno);
-
-      // Buscar un residuo pendiente de este usuario
-      const { data: residuoPendiente, error: residuoError } = await supabase
-        .from('residuos')
-        .select('*')
-        .eq('usuario_id', usuarioDuenno.id)
-        .eq('estado', 'pendiente')
-        .order('fecha_registro', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (residuoError || !residuoPendiente) {
-        setMensajeQR({ 
-          texto: `❌ El usuario ${usuarioDuenno.nombre} no tiene residuos pendientes para reciclar.`, 
-          tipo: "error" 
-        });
-        setVerificandoQR(false);
-        return;
-      }
-
-      console.log("✅ Residuo encontrado:", residuoPendiente);
-
-      // Puntos a otorgar al usuario que trajo el residuo (dueño del QR)
-      const puntosGanados = residuoPendiente.puntos_otorgados || 100;
-      
-      // 1. Registrar la entrega (punto de reciclaje)
-      const { error: entregaError } = await supabase
-        .from('entregas')
-        .insert([
-          {
-            residuo_id: residuoPendiente.id,
-            usuario_id: usuarioDuenno.id, // El dueño del residuo
-            punto_reciclaje_id: null,
-            fecha_entrega: new Date().toISOString(),
-            estado_entrega: "completada",
-            codigo_verificacion: codigoQR,
-            observaciones: `Residuo reciclado en punto de reciclaje`
-          }
-        ]);
-
-      if (entregaError) {
-        console.error("Error al registrar entrega:", entregaError);
-        setMensajeQR({ texto: "❌ Error al registrar la entrega. Intenta de nuevo.", tipo: "error" });
-        setVerificandoQR(false);
-        return;
-      }
-
-      // 2. Actualizar el estado del residuo a entregado
-      await supabase
-        .from('residuos')
-        .update({ estado: "entregado" })
-        .eq('id', residuoPendiente.id);
-
-      // 3. Registrar en historial de puntos del usuario dueño
-      await supabase
-        .from('historial_puntos')
-        .insert([
-          {
-            usuario_id: usuarioDuenno.id,
-            puntos: puntosGanados,
-            concepto: `Reciclaje completado - Residuo: ${residuoPendiente.descripcion || 'Residuo reciclable'} - Entregado en punto de reciclaje`,
-            referencia_id: residuoPendiente.id,
-            fecha: new Date().toISOString()
-          }
-        ]);
-
-      // 4. Actualizar puntos del usuario dueño
-      const nuevosPuntos = (usuarioDuenno.puntos_actuales || 0) + puntosGanados;
-      await supabase
-        .from('users')
-        .update({ puntos_actuales: nuevosPuntos })
-        .eq('id', usuarioDuenno.id);
-
-      // Si el usuario que escanea es el mismo que está logueado, actualizar estado
-      if (usuarioDuenno.id === usuario?.id) {
-        setUsuario({ ...usuario, puntos_actuales: nuevosPuntos });
-      }
-
-      setMensajeQR({ 
-        texto: `🎉 ¡Reciclaje completado! ${usuarioDuenno.nombre} ha recibido ${puntosGanados} puntos por reciclar.`, 
-        tipo: "success" 
-      });
-      
-      // Recargar después de 3 segundos
-      setTimeout(() => {
-        cerrarEscanerQR();
-        if (usuarioDuenno.id === usuario?.id) {
-          window.location.reload();
-        }
-      }, 3000);
-
-    } catch (error) {
-      console.error("Error al verificar QR:", error);
-      setMensajeQR({ texto: "❌ Error al procesar el QR. Intenta de nuevo.", tipo: "error" });
-    } finally {
-      setVerificandoQR(false);
+    // Limpiar el código QR y extraer el UUID
+    let usuarioUUID = codigoQR.trim();
+    const uuidRegex = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i;
+    const match = usuarioUUID.match(uuidRegex);
+    if (match) {
+      usuarioUUID = match[0];
     }
-  };
+    
+    console.log("📌 UUID extraído:", usuarioUUID);
+    
+    // Buscar al usuario dueño del QR
+    const { data: usuarioDuenno, error: usuarioError } = await supabase
+      .from('users')
+      .select('id, nombre, puntos_actuales, auth_uuid')
+      .eq('auth_uuid', usuarioUUID)
+      .single();
+
+    if (usuarioError || !usuarioDuenno) {
+      setMensajeQR({ 
+        texto: `❌ Usuario no encontrado. El código QR no es válido.`, 
+        tipo: "error" 
+      });
+      setVerificandoQR(false);
+      return;
+    }
+
+    console.log("✅ Usuario encontrado:", usuarioDuenno);
+
+    // Buscar un residuo REGISTRADO de este usuario (no entregado aún)
+    const { data: residuoPendiente, error: residuoError } = await supabase
+      .from('residuos')
+      .select('*')
+      .eq('usuario_id', usuarioDuenno.id)
+      .eq('estado', 'registrado')
+      .order('fecha_registro', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (residuoError || !residuoPendiente) {
+      setMensajeQR({ 
+        texto: `❌ El usuario ${usuarioDuenno.nombre} no tiene residuos registrados para reciclar.`, 
+        tipo: "error" 
+      });
+      setVerificandoQR(false);
+      return;
+    }
+
+    console.log("✅ Residuo encontrado:", residuoPendiente);
+
+    // Puntos a otorgar al usuario
+    const puntosGanados = residuoPendiente.puntos_otorgados || 100;
+    
+    // 1. Registrar la entrega - usando los campos correctos según tu esquema
+    const { data: nuevaEntrega, error: entregaError } = await supabase
+      .from('entregas')
+      .insert({
+        residuo_id: residuoPendiente.id,
+        usuario_id: usuarioDuenno.id, // El dueño del residuo
+        punto_reciclaje_id: null,
+        // fecha_entrega se genera automáticamente con DEFAULT now()
+        codigo_verificacion: codigoQR,
+        imagen_evidencia_url: null,
+        estado_entrega: 'verificada', // ✅ 'verificada' es un valor permitido
+        observaciones: `Residuo reciclado en punto de reciclaje - QR escaneado`
+      })
+      .select()
+      .single();
+    
+    if (entregaError) {
+      console.error("Error al registrar entrega:", entregaError);
+      setMensajeQR({ texto: `❌ Error al registrar la entrega: ${entregaError.message}`, tipo: "error" });
+      setVerificandoQR(false);
+      return;
+    }
+    
+    console.log("✅ Entrega registrada:", nuevaEntrega);
+
+    // 2. Actualizar el estado del residuo a 'entregado'
+    const { error: updateError } = await supabase
+      .from('residuos')
+      .update({ estado: 'entregado' })
+      .eq('id', residuoPendiente.id);
+
+    if (updateError) {
+      console.error("Error al actualizar residuo:", updateError);
+    } else {
+      console.log("✅ Residuo actualizado a 'entregado'");
+    }
+
+    // 3. Registrar en historial de puntos del usuario
+    const { error: historialError } = await supabase
+      .from('historial_puntos')
+      .insert({
+        usuario_id: usuarioDuenno.id,
+        puntos: puntosGanados,
+        concepto: `Reciclaje completado - Residuo: ${residuoPendiente.metodo_clasificacion || 'Residuo reciclable'}`,
+        referencia_id: residuoPendiente.id,
+        fecha: new Date().toISOString()
+      });
+
+    if (historialError) {
+      console.error("Error al registrar historial:", historialError);
+    } else {
+      console.log("✅ Historial de puntos registrado");
+    }
+
+    // 4. Actualizar puntos del usuario dueño
+    const nuevosPuntos = (usuarioDuenno.puntos_actuales || 0) + puntosGanados;
+    const { error: userUpdateError } = await supabase
+      .from('users')
+      .update({ puntos_actuales: nuevosPuntos })
+      .eq('id', usuarioDuenno.id);
+
+    if (userUpdateError) {
+      console.error("Error al actualizar puntos:", userUpdateError);
+    } else {
+      console.log(`✅ Puntos actualizados: ${usuarioDuenno.puntos_actuales} → ${nuevosPuntos}`);
+    }
+
+    // Si el usuario que escanea es el mismo que está logueado, actualizar estado
+    if (usuarioDuenno.id === usuario?.id) {
+      setUsuario({ ...usuario, puntos_actuales: nuevosPuntos });
+    }
+
+    setMensajeQR({ 
+      texto: `🎉 ¡Reciclaje completado! ${usuarioDuenno.nombre} ha recibido ${puntosGanados} puntos.`, 
+      tipo: "success" 
+    });
+    
+    // Recargar después de 3 segundos
+    setTimeout(() => {
+      cerrarEscanerQR();
+      if (usuarioDuenno.id === usuario?.id) {
+        window.location.reload();
+      }
+    }, 3000);
+
+  } catch (error) {
+    console.error("Error al verificar QR:", error);
+    setMensajeQR({ texto: "❌ Error al procesar el QR. Intenta de nuevo.", tipo: "error" });
+  } finally {
+    setVerificandoQR(false);
+  }
+};
 
   // Iniciar escáner QR
   const iniciarScannerQR = async () => {
