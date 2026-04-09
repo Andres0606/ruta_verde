@@ -411,3 +411,133 @@
     display: none;
   }
 }
+/* Sección de Estadísticas */
+.estadisticasSection {
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.estadisticasHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.estadisticasHeader h2 {
+  font-size: 18px;
+  color: #1a3d2b;
+  margin: 0;
+}
+
+.estadisticasTabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tabBtn {
+  padding: 8px 20px;
+  border-radius: 30px;
+  background: #f8f9fa;
+  border: 1px solid #e8f5e9;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tabBtn:hover {
+  background: #e8f5e9;
+}
+
+.tabActive {
+  background: #74c69d;
+  border-color: #74c69d;
+  color: white;
+}
+
+.estadisticasGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.estadisticaCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.estadisticaCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.estadisticaRank {
+  width: 40px;
+  height: 40px;
+  background: #74c69d;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+  color: white;
+}
+
+.estadisticaInfo {
+  flex: 1;
+}
+
+.estadisticaNombre {
+  font-weight: 600;
+  color: #1a3d2b;
+  margin-bottom: 4px;
+}
+
+.estadisticaComuna {
+  font-size: 12px;
+  color: #74c69d;
+  margin-bottom: 8px;
+}
+
+.estadisticaStats {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #666;
+}
+
+.sinDatos {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .estadisticasHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .estadisticasGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .estadisticaStats {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

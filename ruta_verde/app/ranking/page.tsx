@@ -19,6 +19,21 @@ interface UsuarioActual extends RankingUser {
   puesto: number;
 }
 
+interface EstadisticaMaquina {
+  id: number;
+  nombre: string;
+  comuna: string;
+  total_entregas: number;
+  puntos_otorgados: number;
+}
+
+interface EstadisticaComuna {
+  comuna: string;
+  total_entregas: number;
+  total_puntos: number;
+  usuarios_activos: number;
+}
+
 type Periodo = "semana" | "mes" | "total";
 
 export default function RankingPage() {
@@ -28,16 +43,20 @@ export default function RankingPage() {
   const [usuarioActual, setUsuarioActual] = useState<UsuarioActual | null>(null);
   const [cargando, setCargando] = useState(true);
   const [totalResiduos, setTotalResiduos] = useState<{ [key: number]: number }>({});
+  const [estadisticasMaquinas, setEstadisticasMaquinas] = useState<EstadisticaMaquina[]>([]);
+  const [estadisticasComunas, setEstadisticasComunas] = useState<EstadisticaComuna[]>([]);
+  const [vistaEstadisticas, setVistaEstadisticas] = useState<"maquinas" | "comunas">("maquinas");
 
   useEffect(() => {
     cargarRanking();
     cargarUsuarioActual();
+    cargarEstadisticasMaquinas();
+    cargarEstadisticasComunas();
   }, [periodo]);
 
   const cargarRanking = async () => {
     setCargando(true);
     
-    // Obtener usuarios ordenados por puntos
     const { data: users, error } = await supabase
       .from("users")
       .select("id, nombre, avatar_url, puntos_actuales, nivel, email")
@@ -48,8 +67,6 @@ export default function RankingPage() {
       console.error("Error cargando ranking:", error);
     } else if (users) {
       setRanking(users);
-      
-      // Cargar cantidad de residuos por usuario
       await cargarResiduosPorUsuario(users.map(u => u.id));
     }
     
@@ -87,7 +104,6 @@ export default function RankingPage() {
     if (error) {
       console.error("Error cargando usuario actual:", error);
     } else if (user) {
-      // Calcular puesto del usuario
       const { data: puestoData } = await supabase
         .from("users")
         .select("id")
@@ -96,6 +112,115 @@ export default function RankingPage() {
       const puesto = (puestoData?.length || 0) + 1;
       setUsuarioActual({ ...user, puesto });
     }
+  };
+
+  const cargarEstadisticasMaquinas = async () => {
+    // Obtener todas las entregas con información de puntos de reciclaje
+    const { data: entregas, error } = await supabase
+      .from("entregas")
+      .select(`
+        punto_reciclaje_id,
+        residuo_id,
+        residuos:residuo_id (puntos_otorgados)
+      `)
+      .eq("estado_entrega", "verificada");
+
+    if (error) {
+      console.error("Error cargando estadísticas de máquinas:", error);
+      return;
+    }
+
+    // Obtener información de los puntos de reciclaje
+    const { data: puntosReciclaje } = await supabase
+      .from("puntos_reciclaje")
+      .select("id, nombre, Comuna");
+
+    if (!puntosReciclaje) return;
+
+    // Calcular estadísticas por máquina
+    const maquinasMap = new Map<number, { nombre: string; comuna: string; total_entregas: number; puntos_otorgados: number }>();
+    
+    puntosReciclaje.forEach(p => {
+      maquinasMap.set(p.id, {
+        nombre: p.nombre,
+        comuna: p.Comuna || "Sin comuna",
+        total_entregas: 0,
+        puntos_otorgados: 0,
+      });
+    });
+
+    entregas?.forEach(entrega => {
+      if (entrega.punto_reciclaje_id && maquinasMap.has(entrega.punto_reciclaje_id)) {
+        const maquina = maquinasMap.get(entrega.punto_reciclaje_id)!;
+        maquina.total_entregas++;
+        maquina.puntos_otorgados += (entrega.residuos as any)?.puntos_otorgados || 0;
+      }
+    });
+
+    const estadisticas = Array.from(maquinasMap.entries())
+      .map(([id, data]) => ({
+        id,
+        nombre: data.nombre,
+        comuna: data.comuna,
+        total_entregas: data.total_entregas,
+        puntos_otorgados: data.puntos_otorgados,
+      }))
+      .filter(m => m.total_entregas > 0)
+      .sort((a, b) => b.total_entregas - a.total_entregas);
+
+    setEstadisticasMaquinas(estadisticas);
+  };
+
+  const cargarEstadisticasComunas = async () => {
+    // Obtener todas las entregas con información de comunas
+    const { data: entregas, error } = await supabase
+      .from("entregas")
+      .select(`
+        id_comuna,
+        residuo_id,
+        residuos:residuo_id (puntos_otorgados, usuario_id),
+        usuarios:usuario_id (id)
+      `)
+      .eq("estado_entrega", "verificada");
+
+    if (error) {
+      console.error("Error cargando estadísticas de comunas:", error);
+      return;
+    }
+
+    // Calcular estadísticas por comuna
+    const comunasMap = new Map<string, { total_entregas: number; total_puntos: number; usuarios: Set<number> }>();
+
+    entregas?.forEach(entrega => {
+      const comunaId = entrega.id_comuna?.toString() || "Sin comuna";
+      
+      if (!comunasMap.has(comunaId)) {
+        comunasMap.set(comunaId, {
+          total_entregas: 0,
+          total_puntos: 0,
+          usuarios: new Set(),
+        });
+      }
+
+      const comuna = comunasMap.get(comunaId)!;
+      comuna.total_entregas++;
+      comuna.total_puntos += (entrega.residuos as any)?.puntos_otorgados || 0;
+      
+      if ((entrega.residuos as any)?.usuario_id) {
+        comuna.usuarios.add((entrega.residuos as any).usuario_id);
+      }
+    });
+
+    const estadisticas = Array.from(comunasMap.entries())
+      .map(([comuna, data]) => ({
+        comuna: comuna === "Sin comuna" ? "No especificada" : `Comuna ${comuna}`,
+        total_entregas: data.total_entregas,
+        total_puntos: data.total_puntos,
+        usuarios_activos: data.usuarios.size,
+      }))
+      .sort((a, b) => b.total_entregas - a.total_entregas);
+
+    setEstadisticasComunas(estadisticas);
   };
 
   const getAvatarIniciales = (nombre: string): string => {
@@ -160,7 +285,69 @@ export default function RankingPage() {
             <p>¡Sé el primero en comenzar a reciclar!</p>
           </div>
         ) : (
-          <div className={styles.layout}>
+          <>
+            {/* Sección de Estadísticas de Máquinas y Comunas */}
+            <div className={styles.estadisticasSection}>
+              <div className={styles.estadisticasHeader}>
+                <h2>📊 Estadísticas de Reciclaje</h2>
+                <div className={styles.estadisticasTabs}>
+                  <button
+                    className={`${styles.tabBtn} ${vistaEstadisticas === "maquinas" ? styles.tabActive : ""}`}
+                    onClick={() => setVistaEstadisticas("maquinas")}
+                  >
+                    🏪 Puntos de Reciclaje
+                  </button>
+                  <button
+                    className={`${styles.tabBtn} ${vistaEstadisticas === "comunas" ? styles.tabActive : ""}`}
+                    onClick={() => setVistaEstadisticas("comunas")}
+                  >
+                    📍 Por Comunas
+                  </button>
+                </div>
+              </div>
+
+              {vistaEstadisticas === "maquinas" ? (
+                <div className={styles.estadisticasGrid}>
+                  {estadisticasMaquinas.length === 0 ? (
+                    <p className={styles.sinDatos}>No hay entregas registradas aún</p>
+                  ) : (
+                    estadisticasMaquinas.map((maquina, idx) => (
+                      <div key={maquina.id} className={styles.estadisticaCard}>
+                        <div className={styles.estadisticaRank}>#{idx + 1}</div>
+                        <div className={styles.estadisticaInfo}>
+                          <div className={styles.estadisticaNombre}>{maquina.nombre}</div>
+                          <div className={styles.estadisticaComuna}>📍 {maquina.comuna}</div>
+                          <div className={styles.estadisticaStats}>
+                            <span>📦 {maquina.total_entregas} entregas</span>
+                            <span>🏆 {maquina.puntos_otorgados} pts</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : (
+                <div className={styles.estadisticasGrid}>
+                  {estadisticasComunas.length === 0 ? (
+                    <p className={styles.sinDatos}>No hay entregas registradas aún</p>
+                  ) : (
+                    estadisticasComunas.map((comuna, idx) => (
+                      <div key={comuna.comuna} className={styles.estadisticaCard}>
+                        <div className={styles.estadisticaRank}>#{idx + 1}</div>
+                        <div className={styles.estadisticaInfo}>
+                          <div className={styles.estadisticaNombre}>{comuna.comuna}</div>
+                          <div className={styles.estadisticaStats}>
+                            <span>📦 {comuna.total_entregas} entregas</span>
+                            <span>🏆 {comuna.total_puntos} pts</span>
+                            <span>👥 {comuna.usuarios_activos} usuarios</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* PODIO TOP 3 */}
             <div className={styles.podioSection}>
@@ -227,8 +414,6 @@ export default function RankingPage() {
 
             {/* TABLA COMPLETA */}
             <div className={styles.tablaSection}>
-
-              {/* Encabezado */}
               <div className={styles.tablaHeader}>
                 <span className={styles.thPos}>#</span>
                 <span className={styles.thUsuario}>Usuario</span>
@@ -238,7 +423,6 @@ export default function RankingPage() {
                 <span className={styles.thNivel}>Nivel</span>
               </div>
 
-              {/* Filas top 10 */}
               {top10.map((user, i) => {
                 const barPct = maxPuntos > 0 ? (user.puntos_actuales / maxPuntos) * 100 : 0;
                 const isTop3 = i < 3;
@@ -346,7 +530,7 @@ export default function RankingPage() {
                 </>
               )}
             </div>
-          </div>
+          </>
         )}
       </main>
       <Footer />
