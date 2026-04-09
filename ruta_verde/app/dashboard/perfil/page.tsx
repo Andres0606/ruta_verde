@@ -32,6 +32,7 @@ export default function PerfilPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [copiado, setCopiado] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -108,7 +109,6 @@ export default function PerfilPage() {
       const svg = qrRef.current.querySelector('svg');
       if (!svg) return;
       
-      // Crear un canvas para convertir SVG a PNG
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
@@ -139,6 +139,14 @@ export default function PerfilPage() {
       console.error('Error al descargar QR:', error);
       alert('Error al descargar el QR');
       setDownloading(false);
+    }
+  };
+
+  const copiarId = async () => {
+    if (user?.auth_uuid) {
+      await navigator.clipboard.writeText(user.auth_uuid);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 3000);
     }
   };
 
@@ -368,6 +376,40 @@ export default function PerfilPage() {
               <p className={styles.qrDescription}>
                 Escanea este QR en las máquinas de reciclaje para recibir tus puntos
               </p>
+              
+              {/* ID del usuario para copiar manualmente */}
+              <div className={styles.userIdSection}>
+                <div className={styles.userIdLabel}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  Tu ID de reciclaje:
+                </div>
+                <div className={styles.userIdValue}>
+                  <code className={styles.userIdCode}>{user?.auth_uuid}</code>
+                  <button 
+                    className={styles.copyIdBtn}
+                    onClick={copiarId}
+                    title="Copiar ID"
+                  >
+                    {copiado ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 6L9 17l-5-5"/>
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                <p className={styles.userIdHint}>
+                  Si no puedes escanear el QR, ingresa este ID manualmente en la máquina
+                </p>
+              </div>
+
               <button 
                 className={styles.downloadQrBtn}
                 onClick={downloadQR}

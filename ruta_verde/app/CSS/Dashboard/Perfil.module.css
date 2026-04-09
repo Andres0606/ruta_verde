@@ -293,3 +293,68 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+/* Sección del ID de usuario */
+.userIdSection {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  width: 100%;
+  text-align: center;
+}
+
+.userIdLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.userIdValue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.userIdCode {
+  font-size: 12px;
+  font-family: monospace;
+  background: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e8f5e9;
+  color: #1a3d2b;
+  word-break: break-all;
+  max-width: 250px;
+}
+
+.copyIdBtn {
+  background: #74c69d;
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.copyIdBtn:hover {
+  background: #40916c;
+}
+
+.copyIdBtn svg {
+  color: white;
+}
+
+.userIdHint {
+  font-size: 11px;
+  color: #999;
+  margin: 0;
+}
