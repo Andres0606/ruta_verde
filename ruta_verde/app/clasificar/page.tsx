@@ -6,6 +6,7 @@ import Footer from "../Components/footer";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { Html5Qrcode } from "html5-qrcode";
 
 type Fase = "idle" | "camara" | "captura" | "analizando" | "resultado";
 
@@ -56,11 +57,18 @@ export default function ClasificarPage() {
   const [cargandoPuntos, setCargandoPuntos] = useState(true);
   const [comunaFiltro, setComunaFiltro] = useState<string>("todas");
   const [puntoExpandido, setPuntoExpandido] = useState<number | null>(null);
+  
+  // Estados para escaneo QR
+  const [mostrarEscanerQR, setMostrarEscanerQR] = useState(false);
+  const [verificandoQR, setVerificandoQR] = useState(false);
+  const [mensajeQR, setMensajeQR] = useState<{ texto: string; tipo: "success" | "error" | "info" } | null>(null);
+  const [codigoQRManual, setCodigoQRManual] = useState("");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
   const cargarPuntosReciclaje = async () => {
     setCargandoPuntos(true);
@@ -119,7 +127,6 @@ export default function ClasificarPage() {
   }, [router]);
 
   const comunasUnicas = ["todas", ...Array.from(new Set(puntosReciclaje.map(p => p.Comuna)))];
-
   const puntosFiltrados = comunaFiltro === "todas"
     ? puntosReciclaje
     : puntosReciclaje.filter(p => p.Comuna === comunaFiltro);
@@ -211,15 +218,215 @@ export default function ClasificarPage() {
         setQrGenerado(data.qr_code);
       }
 
-      if (data.puntos_totales !== undefined && usuario) {
-        setUsuario({ ...usuario, puntos_actuales: data.puntos_totales });
-      }
+      // ✅ NO SUMAMOS PUNTOS AQUÍ, SOLO GUARDAMOS EL RESIDUO
+      // Los puntos se sumarán cuando se escanee el QR en el punto de reciclaje
 
     } catch (error) {
       setErrorMsg(error instanceof Error ? error.message : 'Error al analizar. Intenta de nuevo.');
       setFase("idle");
       setFotoUrl(null);
     }
+  };
+
+  // ✅ FUNCIÓN PARA VERIFICAR QR - AQUÍ SE SUMAN LOS PUNTOS (PUNTO DE RECICLAJE)
+  const verificarQRCode = async (codigoQR: string) => {
+    setVerificandoQR(true);
+    setMensajeQR(null);
+    
+    try {
+      console.log("🔍 Código QR escaneado:", codigoQR);
+      
+      // Limpiar el código QR y extraer el UUID
+      let usuarioUUID = codigoQR.trim();
+      const uuidRegex = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/i;
+      const match = usuarioUUID.match(uuidRegex);
+      if (match) {
+        usuarioUUID = match[0];
+      }
+      
+      console.log("📌 UUID extraído:", usuarioUUID);
+      
+      // Buscar al usuario dueño del QR
+      const { data: usuarioDuenno, error: usuarioError } = await supabase
+        .from('users')
+        .select('id, nombre, puntos_actuales, auth_uuid')
+        .eq('auth_uuid', usuarioUUID)
+        .single();
+
+      if (usuarioError || !usuarioDuenno) {
+        setMensajeQR({ 
+          texto: `❌ Usuario no encontrado. El código QR no es válido.`, 
+          tipo: "error" 
+        });
+        setVerificandoQR(false);
+        return;
+      }
+
+      console.log("✅ Usuario encontrado:", usuarioDuenno);
+
+      // Buscar un residuo pendiente de este usuario
+      const { data: residuoPendiente, error: residuoError } = await supabase
+        .from('residuos')
+        .select('*')
+        .eq('usuario_id', usuarioDuenno.id)
+        .eq('estado', 'pendiente')
+        .order('fecha_registro', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (residuoError || !residuoPendiente) {
+        setMensajeQR({ 
+          texto: `❌ El usuario ${usuarioDuenno.nombre} no tiene residuos pendientes para reciclar.`, 
+          tipo: "error" 
+        });
+        setVerificandoQR(false);
+        return;
+      }
+
+      console.log("✅ Residuo encontrado:", residuoPendiente);
+
+      // Puntos a otorgar al usuario que trajo el residuo (dueño del QR)
+      const puntosGanados = residuoPendiente.puntos_otorgados || 100;
+      
+      // 1. Registrar la entrega (punto de reciclaje)
+      const { error: entregaError } = await supabase
+        .from('entregas')
+        .insert([
+          {
+            residuo_id: residuoPendiente.id,
+            usuario_id: usuarioDuenno.id, // El dueño del residuo
+            punto_reciclaje_id: null,
+            fecha_entrega: new Date().toISOString(),
+            estado_entrega: "completada",
+            codigo_verificacion: codigoQR,
+            observaciones: `Residuo reciclado en punto de reciclaje`
+          }
+        ]);
+
+      if (entregaError) {
+        console.error("Error al registrar entrega:", entregaError);
+        setMensajeQR({ texto: "❌ Error al registrar la entrega. Intenta de nuevo.", tipo: "error" });
+        setVerificandoQR(false);
+        return;
+      }
+
+      // 2. Actualizar el estado del residuo a entregado
+      await supabase
+        .from('residuos')
+        .update({ estado: "entregado" })
+        .eq('id', residuoPendiente.id);
+
+      // 3. Registrar en historial de puntos del usuario dueño
+      await supabase
+        .from('historial_puntos')
+        .insert([
+          {
+            usuario_id: usuarioDuenno.id,
+            puntos: puntosGanados,
+            concepto: `Reciclaje completado - Residuo: ${residuoPendiente.descripcion || 'Residuo reciclable'} - Entregado en punto de reciclaje`,
+            referencia_id: residuoPendiente.id,
+            fecha: new Date().toISOString()
+          }
+        ]);
+
+      // 4. Actualizar puntos del usuario dueño
+      const nuevosPuntos = (usuarioDuenno.puntos_actuales || 0) + puntosGanados;
+      await supabase
+        .from('users')
+        .update({ puntos_actuales: nuevosPuntos })
+        .eq('id', usuarioDuenno.id);
+
+      // Si el usuario que escanea es el mismo que está logueado, actualizar estado
+      if (usuarioDuenno.id === usuario?.id) {
+        setUsuario({ ...usuario, puntos_actuales: nuevosPuntos });
+      }
+
+      setMensajeQR({ 
+        texto: `🎉 ¡Reciclaje completado! ${usuarioDuenno.nombre} ha recibido ${puntosGanados} puntos por reciclar.`, 
+        tipo: "success" 
+      });
+      
+      // Recargar después de 3 segundos
+      setTimeout(() => {
+        cerrarEscanerQR();
+        if (usuarioDuenno.id === usuario?.id) {
+          window.location.reload();
+        }
+      }, 3000);
+
+    } catch (error) {
+      console.error("Error al verificar QR:", error);
+      setMensajeQR({ texto: "❌ Error al procesar el QR. Intenta de nuevo.", tipo: "error" });
+    } finally {
+      setVerificandoQR(false);
+    }
+  };
+
+  // Iniciar escáner QR
+  const iniciarScannerQR = async () => {
+    if (!html5QrCodeRef.current) {
+      html5QrCodeRef.current = new Html5Qrcode("qr-reader");
+    }
+
+    try {
+      await html5QrCodeRef.current.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+        },
+        (decodedText) => {
+          console.log("📱 CÓDIGO QR ESCANEADO:", decodedText);
+          if (!verificandoQR) {
+            html5QrCodeRef.current?.stop();
+            verificarQRCode(decodedText);
+          }
+        },
+        (errorMessage) => {
+          // Ignorar errores de escaneo
+        }
+      );
+    } catch (err) {
+      console.error("Error al iniciar escáner:", err);
+      setMensajeQR({ texto: "No se pudo iniciar la cámara. Verifica los permisos.", tipo: "error" });
+    }
+  };
+
+  // Abrir escáner QR
+  const abrirEscanerQR = async () => {
+    setMostrarEscanerQR(true);
+    setMensajeQR(null);
+    setCodigoQRManual("");
+    
+    setTimeout(async () => {
+      await iniciarScannerQR();
+    }, 500);
+  };
+
+  // Cerrar escáner QR
+  const cerrarEscanerQR = async () => {
+    if (html5QrCodeRef.current) {
+      try {
+        await html5QrCodeRef.current.stop();
+      } catch (error) {
+        console.log("Error al detener escáner:", error);
+      }
+      html5QrCodeRef.current = null;
+    }
+    setMostrarEscanerQR(false);
+    setMensajeQR(null);
+    setVerificandoQR(false);
+    setCodigoQRManual("");
+  };
+
+  // Ingresar QR manualmente
+  const ingresarQRManual = async () => {
+    if (!codigoQRManual.trim()) {
+      setMensajeQR({ texto: "Por favor ingresa un código QR", tipo: "error" });
+      return;
+    }
+    await verificarQRCode(codigoQRManual.trim());
   };
 
   const reiniciar = () => {
@@ -306,7 +513,6 @@ export default function ClasificarPage() {
 
         <div className={styles.layout}>
 
-          {/* ── Panel principal ── */}
           <div className={styles.mainPanel}>
 
             {fase === "idle" && (
@@ -469,7 +675,7 @@ export default function ClasificarPage() {
                       <div className={styles.qrCard}>
                         <h4>📱 Código QR de entrega</h4>
                         <div className={styles.qrCode}>{qrGenerado}</div>
-                        <p>Presenta este código en el punto de reciclaje</p>
+                        <p>Presenta este código en el punto de reciclaje para recibir tus puntos</p>
                         <button
                           className={styles.btnCopiar}
                           onClick={() => { navigator.clipboard.writeText(qrGenerado); alert('Código copiado'); }}
@@ -500,6 +706,20 @@ export default function ClasificarPage() {
                     </button>
                   </div>
 
+                  {/* Sección para escanear QR (Punto de reciclaje) */}
+                  <div className={styles.escaneoQRSeccion}>
+                    <div className={styles.escaneoQRHeader}>
+                      <span className={styles.escaneoQRIcon}>🏪</span>
+                      <h4>Punto de Reciclaje - Escanear QR</h4>
+                    </div>
+                    <p className={styles.escaneoQRDescripcion}>
+                      Escanea el código QR del usuario para registrar la entrega del residuo y otorgar sus EcoPuntos.
+                    </p>
+                    <button className={styles.btnEscanearQR} onClick={abrirEscanerQR}>
+                      <span>📱</span> Escanear QR de usuario
+                    </button>
+                  </div>
+
                   <div className={styles.modelInfoFooter}>
                     <small>🔬 Clasificado con: {resultado.modelo_usado || (modeloActivo === "simple" ? "Modelo Simple" : "Modelo Avanzado")}</small>
                   </div>
@@ -508,10 +728,7 @@ export default function ClasificarPage() {
             )}
           </div>
 
-          {/* ── Panel lateral ── */}
           <div className={styles.sidePanel}>
-
-            {/* Tipos de residuos con colores de canecas */}
             <div className={styles.sideCard}>
               <h3 className={styles.sideTitle}>♻️ Tipos de residuos</h3>
               <div className={styles.tiposList}>
@@ -554,7 +771,6 @@ export default function ClasificarPage() {
               </div>
             </div>
 
-            {/* Puntos de reciclaje */}
             <div className={styles.sideCard}>
               <h3 className={styles.sideTitle}>
                 📍 Puntos de reciclaje
@@ -668,10 +884,67 @@ export default function ClasificarPage() {
               <div className={styles.tipEmoji}>🌳</div>
               <p>Reciclar <strong>1 kg de plástico</strong> puede ahorrar hasta <strong>2 kg de CO₂</strong></p>
             </div>
-
           </div>
         </div>
       </main>
+
+      {/* Modal del escáner QR (Punto de Reciclaje) */}
+      {mostrarEscanerQR && (
+        <div className={styles.modalOverlay} onClick={cerrarEscanerQR}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>🏪 Punto de Reciclaje - Escanear QR</h3>
+              <button className={styles.modalClose} onClick={cerrarEscanerQR}>✕</button>
+            </div>
+            
+            <div className={styles.qrScannerContainer}>
+              <div id="qr-reader" style={{ width: "100%" }}></div>
+            </div>
+
+            <div className={styles.qrManualSection}>
+              <div className={styles.qrManualDivider}>
+                <span>O ingresa el UUID manualmente</span>
+              </div>
+              <div className={styles.qrManualInput}>
+                <input
+                  type="text"
+                  placeholder="Ej: 03fe25f4-631b-42ae-b88d-30a30df077ce"
+                  value={codigoQRManual}
+                  onChange={(e) => setCodigoQRManual(e.target.value)}
+                  className={styles.qrManualInputField}
+                />
+                <button
+                  className={styles.btnManualVerificar}
+                  onClick={ingresarQRManual}
+                  disabled={verificandoQR}
+                >
+                  Verificar
+                </button>
+              </div>
+            </div>
+
+            {verificandoQR && (
+              <div className={styles.qrVerificando}>
+                <div className={styles.spinner}></div>
+                <p>Verificando código...</p>
+              </div>
+            )}
+            
+            {mensajeQR && (
+              <div className={`${styles.qrMensaje} ${styles[`qrMensaje${mensajeQR.tipo}`]}`}>
+                {mensajeQR.texto}
+              </div>
+            )}
+            
+            <div className={styles.modalFooter}>
+              <button className={styles.btnCerrarQR} onClick={cerrarEscanerQR}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </>
   );
