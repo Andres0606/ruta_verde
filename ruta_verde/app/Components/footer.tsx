@@ -94,40 +94,7 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Impacto resumen */}
-        <div className={styles.impactStrip}>
-          <div className={styles.impactItem}>
-            <span className={styles.impactEmoji}>♻️</span>
-            <div>
-              <strong>2,480 kg</strong>
-              <small>reciclados</small>
-            </div>
-          </div>
-          <div className={styles.impactDivider} />
-          <div className={styles.impactItem}>
-            <span className={styles.impactEmoji}>☁️</span>
-            <div>
-              <strong>2.4 ton</strong>
-              <small>CO₂ evitado</small>
-            </div>
-          </div>
-          <div className={styles.impactDivider} />
-          <div className={styles.impactItem}>
-            <span className={styles.impactEmoji}>🌳</span>
-            <div>
-              <strong>120</strong>
-              <small>árboles equiv.</small>
-            </div>
-          </div>
-          <div className={styles.impactDivider} />
-          <div className={styles.impactItem}>
-            <span className={styles.impactEmoji}>👥</span>
-            <div>
-              <strong>840</strong>
-              <small>usuarios activos</small>
-            </div>
-          </div>
-        </div>
+        
 
         {/* Bottom bar */}
         <div className={styles.bottom}>
