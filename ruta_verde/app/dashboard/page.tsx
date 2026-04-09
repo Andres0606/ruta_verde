@@ -170,13 +170,7 @@ export default function DashboardPage() {
             <span className={styles.statLabel}>Residuos Reciclados</span>
           </div>
         </div>
-        <div className={styles.statCard}>
-          <div className={styles.statIcon}>🌍</div>
-          <div className={styles.statContent}>
-            <span className={styles.statValue}>{Math.floor(totalResiduos * 0.5)}</span>
-            <span className={styles.statLabel}>CO₂ Ahorrado (kg)</span>
-          </div>
-        </div>
+        
       </div>
 
       {/* Progress Bar */}

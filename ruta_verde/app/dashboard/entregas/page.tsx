@@ -323,7 +323,6 @@ export default function EntregasPage() {
 
                 {entrega.punto_reciclaje && (
                   <div className={styles.entregaPunto}>
-                    <div className={styles.puntoIcon}>🏪</div>
                     <div className={styles.puntoInfo}>
                       <div className={styles.puntoNombre}>{entrega.punto_reciclaje.nombre}</div>
                       <div className={styles.puntoDireccion}>{entrega.punto_reciclaje.direccion}</div>
